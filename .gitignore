@@ -1,0 +1,12 @@
+### IDE ###
+.idea/
+.vscode/
+
+### MacOS ###
+.DS_Store
+
+### log ###
+logs/
+
+### configuration ###
+config.yml

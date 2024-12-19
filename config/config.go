@@ -30,7 +30,8 @@ type LoginConfig struct {
 
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	DSN string `mapstructure:"dsn"`
+	DSN           string `mapstructure:"dsn"`
+	SlowThreshold int64  `mapstructure:"slow_threshold"`
 }
 
 // MinioConfig minio配置

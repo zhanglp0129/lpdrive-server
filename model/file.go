@@ -16,5 +16,5 @@ type File struct {
 	OriginalFilename    *string `gorm:"index;comment:原文件名称，未删除则为null"`
 	OriginalFilenameGBK []byte  `gorm:"comment:GBK编码下的原文件名，未删除则为null"`
 	IsShare             bool    `gorm:"default:0;not null;comment:是否被分享"`
-	IsWhiteList         *bool   `gorm:"comment:是否启用分享白名单，未分享文件则为null"`
+	IsWhiteList         bool    `gorm:"default:0;comment:是否启用分享白名单"`
 }

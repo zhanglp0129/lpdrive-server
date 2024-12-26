@@ -28,7 +28,7 @@ func initDatabase() {
 	}
 
 	// 迁移表结构
-	err = db.AutoMigrate(&model.User{}, &model.File{}, &model.Share{})
+	err = db.AutoMigrate(&model.User{}, &model.File{}, &model.Share{}, &model.Link{})
 	if err != nil {
 		logger.L.WithError(err).Panicln("数据库表迁移失败")
 	}

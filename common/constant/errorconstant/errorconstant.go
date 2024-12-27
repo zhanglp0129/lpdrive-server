@@ -10,4 +10,5 @@ const (
 	FilenameLengthExceedLimit LpdriveError = "文件名长度超出上限"
 	IllegalFilename           LpdriveError = "文件名非法"
 	JwtParseError             LpdriveError = "jwt令牌解析失败"
+	LoginTokenError           LpdriveError = "登录信息错误或未登录"
 )

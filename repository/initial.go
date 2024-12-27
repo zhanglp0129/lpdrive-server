@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"context"
+	"github.com/redis/go-redis/v9"
 	"github.com/zhanglp0129/lpdrive-server/config"
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	"github.com/zhanglp0129/lpdrive-server/model"
@@ -8,10 +10,14 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
+var (
+	DB  *gorm.DB
+	RDB redis.UniversalClient
+)
 
 func init() {
 	initDatabase()
+	initRedis()
 }
 
 // 初始化数据库连接
@@ -24,7 +30,7 @@ func initDatabase() {
 		Logger: &logger.GormLogger{},
 	})
 	if err != nil {
-		logger.L.WithError(err).Panicln("数据库连接失败")
+		logger.L.WithField("dsn", dsn).WithError(err).Panicln("数据库连接失败")
 	}
 
 	// 迁移表结构
@@ -35,4 +41,21 @@ func initDatabase() {
 
 	// 设置全局数据库实例
 	DB = db
+}
+
+// 初始化redis
+func initRedis() {
+	redisConfig := config.C.Redis
+	rdb := redis.NewUniversalClient(&redis.UniversalOptions{
+		Addrs:    redisConfig.Addrs,
+		DB:       redisConfig.DB,
+		Username: redisConfig.Username,
+		Password: redisConfig.Password,
+	})
+
+	// 判断是否连接成功
+	err := rdb.Ping(context.Background()).Err()
+	if err != nil {
+		logger.L.WithField("config", redisConfig).WithError(err).Panicln("redis连接失败")
+	}
 }

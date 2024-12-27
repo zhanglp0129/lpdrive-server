@@ -7,6 +7,7 @@ type Config struct {
 	Login    LoginConfig    `mapstructure:"login"`
 	Database DatabaseConfig `mapstructure:"database"`
 	Minio    MinioConfig    `mapstructure:"minio"`
+	Redis    RedisConfig    `mapstructure:"redis"`
 	Log      LogConfig      `mapstructure:"log"`
 }
 
@@ -40,6 +41,14 @@ type MinioConfig struct {
 	BucketName string `mapstructure:"bucket_name"`
 	AccessKey  string `mapstructure:"access_key"`
 	SecretKey  string `mapstructure:"secret_key"`
+}
+
+// RedisConfig redis相关配置
+type RedisConfig struct {
+	Addrs    []string `mapstructure:"addrs"`
+	DB       int      `mapstructure:"db"`
+	Username string   `mapstructure:"username"`
+	Password string   `mapstructure:"password"`
 }
 
 // LogConfig 日志配置

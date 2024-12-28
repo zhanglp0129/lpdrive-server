@@ -2,29 +2,37 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/zhanglp0129/lpdrive-server/middleware"
 )
 
-var (
-	// R 根路由
-	R *gin.Engine
-	// 用户端路由
-	portal *gin.RouterGroup
-	// 管理端路由
-	admin *gin.RouterGroup
-)
+// Router 自定义路由器
+type Router struct {
+	*gin.RouterGroup
+}
 
-func init() {
-	R = gin.New()
-	// 替换默认日志
-	R.Use(middleware.LoggerMiddleware)
-	// 替换默认崩溃恢复逻辑
-	R.Use(middleware.RecoveryMiddleware)
+func (r *Router) handle(method, path string, handles ...HandleFunc) {
+	hs := make([]gin.HandlerFunc, 0, len(handles))
+	for _, h := range handles {
+		hs = append(hs, h.toGinHandleFunc())
+	}
+	r.Handle(method, path, hs...)
+}
 
-	// 初始化用户端和管理端路由
-	portal = R.Group("/portal")
-	admin = R.Group("/admin")
+func (r *Router) Get(path string, handles ...HandleFunc) {
+	r.handle("GET", path, handles...)
+}
 
-	// 为用户端路由绑定中间件
-	portal.Use(middleware.LoginMiddleware)
+func (r *Router) Post(path string, handles ...HandleFunc) {
+	r.handle("POST", path, handles...)
+}
+
+func (r *Router) Put(path string, handles ...HandleFunc) {
+	r.handle("PUT", path, handles...)
+}
+
+func (r *Router) Patch(path string, handles ...HandleFunc) {
+	r.handle("PATCH", path, handles...)
+}
+
+func (r *Router) Delete(path string, handles ...HandleFunc) {
+	r.handle("DELETE", path, handles...)
 }

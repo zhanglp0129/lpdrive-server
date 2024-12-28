@@ -11,7 +11,7 @@ import (
 // LoginMiddleware 用户端登录鉴权中间件
 func LoginMiddleware(c *gin.Context) {
 	// 排除登录接口
-	if c.Request.URL.Path == "/portal/v1/user/login" {
+	if c.Request.URL.Path == "/portal/user/login" {
 		return
 	}
 

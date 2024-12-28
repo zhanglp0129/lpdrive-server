@@ -12,4 +12,5 @@ const (
 	JwtParseError             LpdriveError = "jwt令牌解析失败"
 	LoginTokenError           LpdriveError = "登录信息错误或未登录"
 	UsernamePasswordError     LpdriveError = "用户名或密码错误"
+	UserNotFound              LpdriveError = "用户不存在"
 )

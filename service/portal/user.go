@@ -7,6 +7,7 @@ import (
 	"github.com/zhanglp0129/lpdrive-server/repository"
 	"github.com/zhanglp0129/lpdrive-server/utils/jwtutil"
 	"github.com/zhanglp0129/lpdrive-server/utils/secureutil"
+	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
 	"gorm.io/gorm"
 )
 
@@ -33,4 +34,18 @@ func UserLogin(username, password string) (string, error) {
 		"id": user.ID,
 	}
 	return jwtutil.CreateJwtToken(claims)
+}
+
+func UserInfo(id int64) (*portalvo.UserInfoVO, error) {
+	// 查询数据
+	var vo portalvo.UserInfoVO
+	err := repository.DB.Model(&model.User{}).
+		Where("id = ?", id).Take(&vo).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errorconstant.UserNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &vo, nil
 }

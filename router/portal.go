@@ -24,4 +24,5 @@ func handlePortalUser() {
 	var user Router
 	user.RouterGroup = portal.Group("/user")
 	user.Post("/login", portalcontroller.UserLogin)
+	user.Get("", portalcontroller.UserInfo)
 }

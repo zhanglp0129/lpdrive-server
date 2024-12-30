@@ -6,17 +6,21 @@ import (
 	"github.com/zhanglp0129/lpdrive-server/config"
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	"github.com/zhanglp0129/lpdrive-server/model"
+	"github.com/zhanglp0129/snowflake"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"time"
 )
 
 var (
 	DB  *gorm.DB
 	RDB redis.UniversalClient
+	W   snowflake.WorkerInterface
 )
 
 func init() {
 	initDatabase()
+	initSnowflake()
 	initRedis()
 }
 
@@ -41,6 +45,34 @@ func initDatabase() {
 
 	// 设置全局数据库实例
 	DB = db
+}
+
+// 初始化雪花算法
+func initSnowflake() {
+	// 设置起始时间
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		logger.L.WithError(err).Panicln("时区加载失败")
+	}
+	startTime, err := time.ParseInLocation(
+		"2006-01-02 15:04:05", "2024-12-30 00:00:00", loc)
+	if err != nil {
+		logger.L.WithError(err).Panicln("雪花算法起始时间解析失败")
+	}
+
+	// 加载雪花算法配置
+	c := snowflake.SnowFlakeConfig{
+		StartTimestamp: startTime.UnixMilli(),
+		TimestampBits:  45,
+		MachineIdBits:  8,
+		SeqBits:        10,
+	}
+
+	// 创建工作结点
+	W, err = snowflake.NewWorker(c, 0)
+	if err != nil {
+		logger.L.WithError(err).Panicln("创建雪花算法工作结点失败")
+	}
 }
 
 // 初始化redis

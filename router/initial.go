@@ -14,6 +14,8 @@ func init() {
 	R = gin.New()
 	// 替换默认日志
 	R.Use(middleware.LoggerMiddleware)
+	// 使用request id中间件
+	R.Use(middleware.RequestIdMiddleware)
 	// 替换默认崩溃恢复逻辑
 	R.Use(middleware.RecoveryMiddleware)
 

@@ -26,4 +26,5 @@ func handlePortalUser() {
 	user.Post("/login", portalcontroller.UserLogin)
 	user.Get("", portalcontroller.UserInfo)
 	user.Patch("/password", portalcontroller.UserChangePassword)
+	user.Patch("/nickname", portalcontroller.UserChangeNickname)
 }

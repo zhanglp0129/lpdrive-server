@@ -10,3 +10,8 @@ type UserChangePasswordDTO struct {
 	OldPassword string `json:"oldPassword"`
 	Password    string `json:"password"`
 }
+
+type UserChangeNicknameDTO struct {
+	ID       int64  `json:"-"`
+	Nickname string `json:"nickname"`
+}

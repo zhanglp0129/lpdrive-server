@@ -79,3 +79,8 @@ func UserChangePassword(dto portaldto.UserChangePasswordDTO) error {
 		return tx.Updates(&user).Error
 	})
 }
+
+func UserChangeNickname(dto portaldto.UserChangeNicknameDTO) error {
+	return repository.DB.Model(&model.User{}).Where("id = ?", dto.ID).
+		Update("nickname", dto.Nickname).Error
+}

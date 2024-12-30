@@ -2,6 +2,7 @@ package portalcontroller
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	portalservice "github.com/zhanglp0129/lpdrive-server/service/portal"
@@ -58,4 +59,27 @@ func UserChangePassword(c *gin.Context) (any, error) {
 	// 修改密码
 	err = portalservice.UserChangePassword(dto)
 	return nil, err
+}
+
+// UserChangeNickname 修改昵称
+func UserChangeNickname(c *gin.Context) (any, error) {
+	var dto portaldto.UserChangeNicknameDTO
+	err := c.ShouldBindJSON(&dto)
+	if err != nil {
+		return nil, err
+	}
+	// 判断昵称长度是否超出上限
+	var length int
+	for range dto.Nickname {
+		length++
+		if length > 10 {
+			return nil, errorconstant.NicknameLengthExceedLimit
+		}
+	}
+	// 获取用户id
+	id := c.Value("id").(int64)
+	dto.ID = id
+	logger.L.WithField("UserChangeNicknameDTO", dto).Info()
+
+	return nil, portalservice.UserChangeNickname(dto)
 }

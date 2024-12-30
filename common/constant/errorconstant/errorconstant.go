@@ -15,4 +15,5 @@ const (
 	UserNotFound              LpdriveError = "用户不存在"
 	IllegalPassword           LpdriveError = "密码非法"
 	OldPasswordError          LpdriveError = "旧密码错误"
+	NicknameLengthExceedLimit LpdriveError = "昵称长度超出上限"
 )

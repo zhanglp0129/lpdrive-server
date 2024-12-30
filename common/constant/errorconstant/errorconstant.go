@@ -13,4 +13,6 @@ const (
 	LoginTokenError           LpdriveError = "登录信息错误或未登录"
 	UsernamePasswordError     LpdriveError = "用户名或密码错误"
 	UserNotFound              LpdriveError = "用户不存在"
+	IllegalPassword           LpdriveError = "密码非法"
+	OldPasswordError          LpdriveError = "旧密码错误"
 )

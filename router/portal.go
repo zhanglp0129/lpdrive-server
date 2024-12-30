@@ -25,4 +25,5 @@ func handlePortalUser() {
 	user.RouterGroup = portal.Group("/user")
 	user.Post("/login", portalcontroller.UserLogin)
 	user.Get("", portalcontroller.UserInfo)
+	user.Patch("/password", portalcontroller.UserChangePassword)
 }

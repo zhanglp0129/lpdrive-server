@@ -3,6 +3,7 @@ package portalservice
 import (
 	"errors"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
+	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/model"
 	"github.com/zhanglp0129/lpdrive-server/repository"
 	"github.com/zhanglp0129/lpdrive-server/utils/jwtutil"
@@ -48,4 +49,33 @@ func UserInfo(id int64) (*portalvo.UserInfoVO, error) {
 	}
 
 	return &vo, nil
+}
+
+func UserChangePassword(dto portaldto.UserChangePasswordDTO) error {
+	// 重新生成加密盐值
+	salt := secureutil.GenerateSalt()
+	return repository.DB.Transaction(func(tx *gorm.DB) error {
+		// 查询数据库，判断旧密码是否正确
+		var user model.User
+		err := tx.Select("password", "salt", "id").
+			Take(&user, dto.ID).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errorconstant.UserNotFound
+		} else if err != nil {
+			return err
+		}
+
+		// 对旧密码加密
+		encryptOldPassword := secureutil.EncryptPassword(dto.OldPassword, user.Salt)
+		if encryptOldPassword != user.Password {
+			return errorconstant.OldPasswordError
+		}
+		// 旧密码校验通过，对新密码加密
+		encryptPassword := secureutil.EncryptPassword(dto.Password, salt)
+		user.Password = encryptPassword
+		user.Salt = salt
+
+		// 写入数据库
+		return tx.Updates(&user).Error
+	})
 }

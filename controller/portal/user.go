@@ -5,6 +5,7 @@ import (
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	portalservice "github.com/zhanglp0129/lpdrive-server/service/portal"
+	"github.com/zhanglp0129/lpdrive-server/utils/secureutil"
 )
 
 // UserLogin 用户登录接口
@@ -34,4 +35,27 @@ func UserInfo(c *gin.Context) (any, error) {
 	}
 	logger.L.WithField("UserInfoVO", vo).Info()
 	return vo, nil
+}
+
+// UserChangePassword 修改密码
+func UserChangePassword(c *gin.Context) (any, error) {
+	// 获取参数
+	var dto portaldto.UserChangePasswordDTO
+	err := c.ShouldBindJSON(&dto)
+	if err != nil {
+		return nil, err
+	}
+	// 校验新密码是否合法
+	err = secureutil.CheckPassword(dto.Password)
+	if err != nil {
+		return nil, err
+	}
+	// 获取用户id
+	id := c.Value("id").(int64)
+	dto.ID = id
+	logger.L.WithField("UserChangePasswordDTO", dto).Info()
+
+	// 修改密码
+	err = portalservice.UserChangePassword(dto)
+	return nil, err
 }

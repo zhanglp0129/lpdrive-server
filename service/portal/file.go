@@ -1,6 +1,7 @@
 package portalservice
 
 import (
+	"errors"
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/model"
 	"github.com/zhanglp0129/lpdrive-server/repository"
@@ -10,26 +11,36 @@ import (
 
 func FileList(dto portaldto.FileListDTO) (portalvo.FileListVO, error) {
 	var vo portalvo.FileListVO
-	err := repository.DB.Transaction(func(db *gorm.DB) error {
-		tx := db.Model(&model.File{}).Select("*", "object_name as sha256")
-		// 获取查询条件
+	err := repository.DB.Transaction(func(tx *gorm.DB) error {
+		// 未指定目录，获取根目录id
 		if dto.ID == nil {
-			// 未指定目录，默认为根目录
-			subQuery := db.Model(&model.File{}).Select("id").
-				Where("user_id = ? and id = dir_id", dto.UserID).Limit(1)
-			tx = tx.Where("dir_id = (?)", subQuery)
-		} else {
-			// 指定目录
-			tx = tx.Where("user_id = ? and id = ?", dto.UserID, dto.ID)
+			var file model.File
+			err := tx.Select("id").Where("user_id = ? and id = dir_id", dto.UserID).
+				First(&file).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				// 不存在根目录，创建根目录
+				id, err := repository.FileCreateRootDirectory(tx, dto.UserID)
+				if err != nil {
+					return err
+				}
+				dto.ID = &id
+			} else if err != nil {
+				return err
+			} else {
+				// 存在根目录
+				dto.ID = &file.ID
+			}
 		}
 
-		// 分页获取根目录下的文件列表
+		// 查询数据
 		offset := (dto.PageNum - 1) * dto.PageSize
-		err := tx.Limit(dto.PageSize).Offset(offset).
-			Order(dto.OrderBy).Find(&vo.Items).Error
+		err := tx.Model(&model.File{}).Select("*", "object_name as sha256").
+			Where("user_id = ? and id = ? and id != dir_id", dto.UserID, dto.ID).
+			Limit(dto.PageSize).Offset(offset).Order(dto.OrderBy).Find(&vo.Items).Error
 		if err != nil {
 			return err
 		}
+		vo.DirID = *dto.ID
 		return nil
 	})
 

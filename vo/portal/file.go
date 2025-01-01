@@ -14,5 +14,6 @@ type FileInfo struct {
 }
 
 type FileListVO struct {
+	DirID int64      `json:"dirId"`
 	Items []FileInfo `json:"items"`
 }

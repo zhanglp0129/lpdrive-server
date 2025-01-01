@@ -11,7 +11,7 @@ type File struct {
 	IsDir               bool    `gorm:"not null;comment:是否为目录"`
 	DirID               int64   `gorm:"unique:uni_file;index;not null;comment:文件所处父目录id，根目录为自身"`
 	Dir                 *File   // 添加外键：dir_id -> file.id
-	OriginalDirID       int64   `gorm:"comment:原父目录id，如果原父目录已删除或该文件未删除，则为null"`
+	OriginalDirID       *int64  `gorm:"comment:原父目录id，如果原父目录已删除或该文件未删除，则为null"`
 	OriginalDir         *File   // 添加外键：original_dir_id -> file.id
 	OriginalFilename    *string `gorm:"index;comment:原文件名称，未删除则为null"`
 	OriginalFilenameGBK []byte  `gorm:"comment:GBK编码下的原文件名，未删除则为null"`

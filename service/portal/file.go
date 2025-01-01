@@ -15,8 +15,8 @@ func FileList(dto portaldto.FileListDTO) (portalvo.FileListVO, error) {
 		// 获取查询条件
 		if dto.ID == nil {
 			// 未指定目录，默认为根目录
-			subQuery := db.Model(&model.File{}).
-				Select("id").Where("user_id = ? and id = dir_id", dto.UserID)
+			subQuery := db.Model(&model.File{}).Select("id").
+				Where("user_id = ? and id = dir_id", dto.UserID).Limit(1)
 			tx = tx.Where("dir_id = (?)", subQuery)
 		} else {
 			// 指定目录

@@ -55,7 +55,7 @@ func initSnowflake() {
 		logger.L.WithError(err).Panicln("时区加载失败")
 	}
 	startTime, err := time.ParseInLocation(
-		"2006-01-02 15:04:05", "2024-12-30 00:00:00", loc)
+		"2006-01-02 15:04:05", "2025-01-01 00:00:00", loc)
 	if err != nil {
 		logger.L.WithError(err).Panicln("雪花算法起始时间解析失败")
 	}

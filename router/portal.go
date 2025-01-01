@@ -17,6 +17,7 @@ func handlePortal() {
 
 	// 处理用户端接口
 	handlePortalUser()
+	handlePortalFile()
 }
 
 // 处理用户相关接口
@@ -27,4 +28,11 @@ func handlePortalUser() {
 	user.Get("", portalcontroller.UserInfo)
 	user.Patch("/password", portalcontroller.UserChangePassword)
 	user.Patch("/nickname", portalcontroller.UserChangeNickname)
+}
+
+// 处理文件相关接口
+func handlePortalFile() {
+	var file Router
+	file.RouterGroup = portal.Group("/file")
+	file.Get("/list", portalcontroller.FileList)
 }

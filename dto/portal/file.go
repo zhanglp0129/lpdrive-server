@@ -8,3 +8,9 @@ type FileListDTO struct {
 	OrderBy  string `form:"orderBy" binding:"required,oneof=filename updated_at size"`
 	Desc     bool   `form:"desc"`
 }
+
+type FileCreateDirectoryDTO struct {
+	UserID int64
+	DirID  int64  `json:"dirId" binding:"required"`
+	Name   string `json:"name" binding:"required"`
+}

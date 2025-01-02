@@ -35,4 +35,5 @@ func handlePortalFile() {
 	var file Router
 	file.RouterGroup = portal.Group("/file")
 	file.Get("/list", portalcontroller.FileList)
+	file.Post("/create/directory", portalcontroller.FileCreateDirectory)
 }

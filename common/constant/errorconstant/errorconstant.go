@@ -16,4 +16,6 @@ const (
 	IllegalPassword           LpdriveError = "密码非法"
 	OldPasswordError          LpdriveError = "旧密码错误"
 	NicknameLengthExceedLimit LpdriveError = "昵称长度超出上限"
+	TooManyDuplicateNameFiles LpdriveError = "太多重名文件"
+	FileNotFound              LpdriveError = "文件不存在"
 )

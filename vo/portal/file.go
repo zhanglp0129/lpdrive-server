@@ -17,3 +17,8 @@ type FileListVO struct {
 	DirID int64      `json:"dirId"`
 	Items []FileInfo `json:"items"`
 }
+
+type FileCreateDirectoryVO struct {
+	ID       int64  `json:"ID"`
+	SaveName string `json:"saveName"`
+}

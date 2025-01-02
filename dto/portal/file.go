@@ -9,7 +9,8 @@ type FileListDTO struct {
 	Desc     bool   `form:"desc"`
 }
 
-type FileCreateDirectoryDTO struct {
+// FileCreateDirectoryEmptyDTO 创建目录和空文件的参数
+type FileCreateDirectoryEmptyDTO struct {
 	UserID int64
 	DirID  int64  `json:"dirId" binding:"required"`
 	Name   string `json:"name" binding:"required"`

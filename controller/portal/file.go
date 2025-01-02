@@ -33,7 +33,7 @@ func FileList(c *gin.Context) (any, error) {
 // FileCreateDirectory 创建目录
 func FileCreateDirectory(c *gin.Context) (any, error) {
 	// 绑定参数
-	var dto portaldto.FileCreateDirectoryDTO
+	var dto portaldto.FileCreateDirectoryEmptyDTO
 	err := c.ShouldBindJSON(&dto)
 	if err != nil {
 		return nil, err
@@ -47,4 +47,23 @@ func FileCreateDirectory(c *gin.Context) (any, error) {
 	logger.L.WithField("FileCreateDirectoryDTO", dto).Info()
 
 	return portalservice.FileCreateDirectory(dto)
+}
+
+// FileCreateEmpty 创建空文件
+func FileCreateEmpty(c *gin.Context) (any, error) {
+	// 绑定参数
+	var dto portaldto.FileCreateDirectoryEmptyDTO
+	err := c.ShouldBindJSON(&dto)
+	if err != nil {
+		return nil, err
+	}
+	// 校验文件名
+	if err = fileutil.CheckFilename(dto.Name); err != nil {
+		return nil, err
+	}
+	// 获取用户id
+	dto.UserID = c.Value("id").(int64)
+	logger.L.WithField("FileCreateEmptyDTO", dto).Info()
+
+	return portalservice.FileCreateEmpty(dto)
 }

@@ -18,7 +18,8 @@ type FileListVO struct {
 	Items []FileInfo `json:"items"`
 }
 
-type FileCreateDirectoryVO struct {
-	ID       int64  `json:"ID"`
+// FileCreateDirectoryEmptyVO 创建目录和空文件的结果
+type FileCreateDirectoryEmptyVO struct {
+	ID       int64  `json:"id"`
 	SaveName string `json:"saveName"`
 }

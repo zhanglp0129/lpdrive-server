@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/redis/go-redis/v9"
 	"github.com/zhanglp0129/lpdrive-server/config"
 	"github.com/zhanglp0129/lpdrive-server/logger"
@@ -13,11 +15,13 @@ import (
 var (
 	DB  *gorm.DB
 	RDB redis.UniversalClient
+	MC  *minio.Core
 )
 
 func init() {
 	initDatabase()
 	initRedis()
+	initMinio()
 }
 
 // 初始化数据库连接
@@ -58,4 +62,17 @@ func initRedis() {
 	if err != nil {
 		logger.L.WithField("config", redisConfig).WithError(err).Panicln("redis连接失败")
 	}
+}
+
+// 初始化minio
+func initMinio() {
+	minioConfig := config.C.Minio
+	mc, err := minio.NewCore(minioConfig.Endpoint, &minio.Options{
+		Creds: credentials.NewStaticV4(minioConfig.AccessKey, minioConfig.SecretKey, ""),
+	})
+	if err != nil {
+		logger.L.WithField("minioConfig", minioConfig).WithError(err).Panicln("minio连接失败")
+	}
+
+	MC = mc
 }

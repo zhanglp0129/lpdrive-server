@@ -7,10 +7,10 @@ import (
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/model"
 	"github.com/zhanglp0129/lpdrive-server/repository"
+	"github.com/zhanglp0129/lpdrive-server/utils/dbutil"
 	"github.com/zhanglp0129/lpdrive-server/utils/gbkutil"
 	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
 	"gorm.io/gorm"
-	"strings"
 )
 
 func FileList(dto portaldto.FileListDTO) (portalvo.FileListVO, error) {
@@ -93,7 +93,7 @@ func FileCreateDirectory(dto portaldto.FileCreateDirectoryDTO) (portalvo.FileCre
 
 		// 添加数据
 		err = repository.DB.Create(&file).Error
-		if err != nil && strings.Contains(err.Error(), "Duplicate entry") {
+		if dbutil.IsDuplicateKeyError(err) {
 			continue
 		} else if err != nil {
 			return portalvo.FileCreateDirectoryVO{}, err

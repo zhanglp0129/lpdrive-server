@@ -1,7 +1,6 @@
 package fileutil
 
 import (
-	"fmt"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	"strings"
 )
@@ -31,9 +30,4 @@ func CheckFilename(filename string) error {
 		return errorconstant.IllegalFilename
 	}
 	return nil
-}
-
-// GetTempUploadObjectName 获取临时上传对象名
-func GetTempUploadObjectName(uuid string) string {
-	return fmt.Sprintf("temp-upload/%s", uuid)
 }

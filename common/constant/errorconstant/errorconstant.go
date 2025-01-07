@@ -18,4 +18,6 @@ const (
 	NicknameLengthExceedLimit LpdriveError = "昵称长度超出上限"
 	TooManyDuplicateNameFiles LpdriveError = "太多重名文件"
 	FileNotFound              LpdriveError = "文件不存在"
+	IllegalArgument           LpdriveError = "参数非法"
+	QueryTimeout              LpdriveError = "查询超时"
 )

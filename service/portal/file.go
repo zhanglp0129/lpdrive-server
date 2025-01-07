@@ -2,8 +2,10 @@ package portalservice
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"github.com/emirpasic/gods/v2/queues/linkedlistqueue"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/fileconstant"
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
@@ -14,6 +16,7 @@ import (
 	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
 	"gorm.io/gorm"
 	"strings"
+	"time"
 )
 
 func FileList(dto portaldto.FileListDTO) (portalvo.FileListVO, error) {
@@ -198,4 +201,56 @@ func FileGetById(id int64, userId int64) (*portalvo.FileInfo, error) {
 		return nil, err
 	}
 	return &fileInfo, nil
+}
+
+func FileGetTree(id int64, userId int64) (*portalvo.FileTreeNode, error) {
+	var vo portalvo.FileTreeNode
+	// 设置查询3s时间上限
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err := repository.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		tx = tx.Model(&model.File{}).
+			Select("*", "object_name as sha256").Session(&gorm.Session{})
+		// 先获取根节点
+		err := tx.Where("id = ? and user_id = ?", id, userId).Take(&vo).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errorconstant.FileNotFound
+		} else if err != nil {
+			return err
+		}
+		if !vo.IsDir {
+			return nil
+		}
+		// 采用广度优先搜索。队列中存储父目录id和子结点指针
+		type queueElementType struct {
+			dirId    int64
+			children *[]portalvo.FileTreeNode
+		}
+		queue := linkedlistqueue.New[queueElementType]()
+		queue.Enqueue(queueElementType{id, &vo.Children})
+		for !queue.Empty() {
+			ele, _ := queue.Dequeue()
+			err = tx.Where("dir_id = ? and user_id = ?", ele.dirId, userId).
+				Find(&ele.children).Error
+			if err != nil {
+				return err
+			}
+			// 将子结点插入队列
+			for i := range *ele.children {
+				if (*ele.children)[i].IsDir {
+					queue.Enqueue(queueElementType{
+						dirId:    (*ele.children)[i].ID,
+						children: &(*ele.children)[i].Children,
+					})
+				}
+			}
+		}
+		return nil
+	})
+	if errors.Is(err, context.DeadlineExceeded) {
+		return nil, errorconstant.QueryTimeout
+	} else if err != nil {
+		return nil, err
+	}
+	return &vo, nil
 }

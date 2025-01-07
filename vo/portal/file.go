@@ -23,3 +23,9 @@ type FileCreateDirectoryEmptyVO struct {
 	ID       int64  `json:"id"`
 	SaveName string `json:"saveName"`
 }
+
+// FileTreeNode 文件树结点
+type FileTreeNode struct {
+	FileInfo
+	Children []FileTreeNode `json:"children,omitempty" gorm:"-"`
+}

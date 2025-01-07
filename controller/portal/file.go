@@ -2,6 +2,7 @@ package portalcontroller
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	portalservice "github.com/zhanglp0129/lpdrive-server/service/portal"
@@ -79,4 +80,21 @@ func FileGetById(c *gin.Context) (any, error) {
 	// 获取用户id
 	userId := c.Value("id").(int64)
 	return portalservice.FileGetById(id, userId)
+}
+
+// FileGetTree 获取文件树
+func FileGetTree(c *gin.Context) (any, error) {
+	// 获取文件id
+	idString, ok := c.GetQuery("id")
+	if !ok {
+		return nil, errorconstant.IllegalArgument
+	}
+	id, err := strconv.ParseInt(idString, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	logger.L.WithField("fileId", id).Info()
+	return portalservice.FileGetTree(id, userId)
 }

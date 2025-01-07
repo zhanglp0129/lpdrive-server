@@ -186,3 +186,16 @@ func FileCreateEmpty(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.FileC
 	}
 	return vo, nil
 }
+
+func FileGetById(id int64, userId int64) (*portalvo.FileInfo, error) {
+	// 查询数据
+	var fileInfo portalvo.FileInfo
+	err := repository.DB.Model(&model.File{}).Select("*", "object_name as sha256").
+		Where("id = ? and user_id = ?", id, userId).Take(&fileInfo).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errorconstant.FileNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	return &fileInfo, nil
+}

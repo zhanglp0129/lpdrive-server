@@ -6,6 +6,7 @@ import (
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	portalservice "github.com/zhanglp0129/lpdrive-server/service/portal"
 	"github.com/zhanglp0129/lpdrive-server/utils/fileutil"
+	"strconv"
 )
 
 // FileList 获取目录下所有子文件
@@ -66,4 +67,16 @@ func FileCreateEmpty(c *gin.Context) (any, error) {
 	logger.L.WithField("FileCreateEmptyDTO", dto).Info()
 
 	return portalservice.FileCreateEmpty(dto)
+}
+
+// FileGetById 根据id获取文件
+func FileGetById(c *gin.Context) (any, error) {
+	// 获取文件id
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	return portalservice.FileGetById(id, userId)
 }

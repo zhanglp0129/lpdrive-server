@@ -37,4 +37,5 @@ func handlePortalFile() {
 	file.Get("/list", portalcontroller.FileList)
 	file.Post("/create/directory", portalcontroller.FileCreateDirectory)
 	file.Post("/create/empty", portalcontroller.FileCreateEmpty)
+	file.Get("/:id", portalcontroller.FileGetById)
 }

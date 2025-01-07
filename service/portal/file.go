@@ -1,6 +1,7 @@
 package portalservice
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
@@ -112,62 +113,76 @@ func FileCreateDirectory(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.F
 }
 
 func FileCreateEmpty(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.FileCreateDirectoryEmptyVO, error) {
-	// 获取文件名长度
-	length := 0
-	for range dto.Name {
-		length++
-	}
-	// 创建添加数据模型
-	file := model.File{
-		UserID:     dto.UserID,
-		ObjectName: &fileconstant.EmptySha256,
-		MimeType:   &fileconstant.DefaultMimeType,
-		DirID:      &dto.DirID,
-	}
-	// 检查父目录是否属于该用户
-	err := repository.FileCheckUser(repository.DB, dto.UserID, dto.DirID)
+	// 返回结果
+	vo := &portalvo.FileCreateDirectoryEmptyVO{}
+	err := repository.DB.Transaction(func(tx *gorm.DB) error {
+		// 获取文件名长度
+		length := 0
+		for range dto.Name {
+			length++
+		}
+		// 创建添加数据模型
+		file := model.File{
+			UserID:     dto.UserID,
+			ObjectName: &fileconstant.EmptySha256,
+			MimeType:   &fileconstant.DefaultMimeType,
+			DirID:      &dto.DirID,
+		}
+		// 检查父目录是否属于该用户
+		err := repository.FileCheckUser(tx, dto.UserID, dto.DirID)
+		if err != nil {
+			return err
+		}
+
+		// 尝试创建空文件夹
+		for i := 0; i <= 30; i++ {
+			name := dto.Name
+			if i > 0 {
+				// 在文件名上加序号，并判断长度
+				num := fmt.Sprintf("(%d)", i)
+				// 校验文件名长度
+				if length+len(num) > 255 {
+					return errorconstant.FilenameLengthExceedLimit
+				}
+				// 拼接文件名
+				pos := strings.LastIndex(name, ".")
+				if pos == -1 {
+					pos = len(name)
+				}
+				name = name[:pos] + num + name[pos:]
+			}
+			// 指定文件名
+			file.Filename = name
+			file.FilenameGBK, err = gbkutil.StrToGbk(name)
+			if err != nil {
+				return err
+			}
+
+			// 添加数据
+			err = tx.Create(&file).Error
+			if dbutil.IsDuplicateKeyError(err) {
+				continue
+			} else if err != nil {
+				return err
+			} else {
+				// 添加成功
+				// 将数据写入minio
+				err = repository.PutObject(fileconstant.EmptySha256,
+					bytes.NewReader(make([]byte, 0)), 0)
+				if err != nil {
+					return err
+				}
+				vo.ID = file.ID
+				vo.SaveName = file.Filename
+				return nil
+			}
+		}
+		// 重试次数太多
+		return errorconstant.TooManyDuplicateNameFiles
+	})
+
 	if err != nil {
 		return nil, err
 	}
-
-	// 尝试创建空文件夹
-	for i := 0; i <= 30; i++ {
-		name := dto.Name
-		if i > 0 {
-			// 在文件名上加序号，并判断长度
-			num := fmt.Sprintf("(%d)", i)
-			// 校验文件名长度
-			if length+len(num) > 255 {
-				return nil, errorconstant.FilenameLengthExceedLimit
-			}
-			// 拼接文件名
-			pos := strings.LastIndex(name, ".")
-			if pos == -1 {
-				pos = len(name)
-			}
-			name = name[:pos] + num + name[pos:]
-		}
-		// 指定文件名
-		file.Filename = name
-		file.FilenameGBK, err = gbkutil.StrToGbk(name)
-		if err != nil {
-			return nil, err
-		}
-
-		// 添加数据
-		err = repository.DB.Create(&file).Error
-		if dbutil.IsDuplicateKeyError(err) {
-			continue
-		} else if err != nil {
-			return nil, err
-		} else {
-			// 添加成功
-			return &portalvo.FileCreateDirectoryEmptyVO{
-				ID:       file.ID,
-				SaveName: file.Filename,
-			}, nil
-		}
-	}
-	// 重试次数太多
-	return nil, errorconstant.TooManyDuplicateNameFiles
+	return vo, nil
 }

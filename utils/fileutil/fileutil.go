@@ -31,3 +31,23 @@ func CheckFilename(filename string) error {
 	}
 	return nil
 }
+
+func BuildOrderBy(orderBy string, desc bool) string {
+	res := ""
+	// 目录永远在文件之前
+	res += "is_dir"
+	if desc {
+		res += " asc"
+	} else {
+		res += " desc"
+	}
+	res += ", "
+	// 真正使用排序字段
+	if orderBy == "filename" {
+		res += "filename_gbk"
+	}
+	if desc {
+		res += " desc"
+	}
+	return res
+}

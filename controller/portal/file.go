@@ -22,12 +22,7 @@ func FileList(c *gin.Context) (any, error) {
 	// 获取用户id
 	dto.UserID = c.Value("id").(int64)
 	// 调整排序规则
-	if dto.OrderBy == "filename" {
-		dto.OrderBy = "filename_gbk"
-	}
-	if dto.Desc {
-		dto.OrderBy += " desc"
-	}
+	dto.OrderBy = fileutil.BuildOrderBy(dto.OrderBy, dto.Desc)
 	logger.L.WithField("FileListDTO", dto).Info()
 
 	return portalservice.FileList(dto)
@@ -116,7 +111,25 @@ func FileGetPath(c *gin.Context) (any, error) {
 func FileGetByPath(c *gin.Context) (any, error) {
 	// 获取参数
 	path := c.Query("path")
+	filenames := strings.Split(path, "/")
+	logger.L.WithField("path", path).WithField("filenames", filenames).Info()
 	// 获取用户id
 	userId := c.Value("id").(int64)
-	return portalservice.FileGetByPath(strings.Split(path, "/"), userId)
+	return portalservice.FileGetByPath(filenames, userId)
+}
+
+// FileSearch 搜索文件
+func FileSearch(c *gin.Context) (any, error) {
+	var dto portaldto.FileSearchDTO
+	err := c.ShouldBindQuery(&dto)
+	if err != nil {
+		return nil, err
+	}
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	dto.UserID = userId
+	// 调整排序规则
+	dto.OrderBy = fileutil.BuildOrderBy(dto.OrderBy, dto.Desc)
+	logger.L.WithField("FileSearchDTO", dto).Info()
+	return portalservice.FileSearch(dto)
 }

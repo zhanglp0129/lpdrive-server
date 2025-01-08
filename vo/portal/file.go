@@ -35,3 +35,7 @@ type FilePathVO struct {
 	Filename string `json:"filename"`
 	DirID    *int64 `json:"-"`
 }
+
+type FileSearchVO struct {
+	Items []FileInfo `json:"items"`
+}

@@ -342,3 +342,18 @@ func FileGetByPath(path []string, userId int64) (*portalvo.FileInfo, error) {
 	}
 	return &vo, nil
 }
+
+func FileSearch(dto portaldto.FileSearchDTO) (*portalvo.FileSearchVO, error) {
+	var vo portalvo.FileSearchVO
+	tx := repository.DB.Model(&model.File{}).Select("*", "object_name as sha256")
+	if dto.Name != nil {
+		tx = tx.Where("filename like ?", "%"+*dto.Name+"%")
+	}
+	offset := (dto.PageNum - 1) * dto.PageSize
+	err := tx.Where("user_id = ? and dir_id is not null", dto.UserID).
+		Offset(offset).Limit(dto.PageSize).Order(dto.OrderBy).Find(&vo.Items).Error
+	if err != nil {
+		return nil, err
+	}
+	return &vo, nil
+}

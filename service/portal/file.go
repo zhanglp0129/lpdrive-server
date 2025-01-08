@@ -3,6 +3,7 @@ package portalservice
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/emirpasic/gods/v2/queues/linkedlistqueue"
@@ -16,6 +17,7 @@ import (
 	"github.com/zhanglp0129/lpdrive-server/utils/gbkutil"
 	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
 	"gorm.io/gorm"
+	"io"
 	"mime"
 	"path/filepath"
 	"slices"
@@ -455,4 +457,34 @@ func FileSmallUpload(dto portaldto.FileSmallUploadDTO) error {
 		// 重试次数太多
 		return errorconstant.TooManyDuplicateNameFiles
 	})
+}
+
+func FileSmallDownload(id int64, userId int64) (*portalvo.FileSmallDownloadVO, error) {
+	// 查询数据库
+	var vo portalvo.FileSmallDownloadVO
+	err := repository.DB.Model(&model.File{}).
+		Where("id = ? and user_id = ? and is_dir = 0", id, userId).
+		Select("object_name as sha256", "mime_type", "filename", "size").
+		Take(&vo).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errorconstant.FileNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	// 判断文件大小
+	if vo.Size > fileconstant.SmallFileLimit {
+		return nil, errorconstant.FileSizeExceedLimit
+	}
+	// 从minio获取文件内容
+	reader, err := repository.ReadObject(vo.Sha256)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	vo.Content = base64.StdEncoding.EncodeToString(content)
+	return &vo, nil
 }

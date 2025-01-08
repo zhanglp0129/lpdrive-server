@@ -43,4 +43,5 @@ func handlePortalFile() {
 	file.Get("/by_path", portalcontroller.FileGetByPath)
 	file.Get("/search", portalcontroller.FileSearch)
 	file.Post("/small/upload", portalcontroller.FileSmallUpload)
+	file.Get("/small/download/:id", portalcontroller.FileSmallDownload)
 }

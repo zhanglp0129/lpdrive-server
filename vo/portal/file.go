@@ -39,3 +39,11 @@ type FilePathVO struct {
 type FileSearchVO struct {
 	Items []FileInfo `json:"items"`
 }
+
+type FileSmallDownloadVO struct {
+	Content  string `json:"content"`
+	Filename string `json:"filename"`
+	MimeType string `json:"mimeType"`
+	Sha256   string `json:"sha256"`
+	Size     int64  `json:"size"`
+}

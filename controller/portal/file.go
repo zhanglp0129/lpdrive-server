@@ -176,3 +176,16 @@ func FileSmallUpload(c *gin.Context) (any, error) {
 	err = portalservice.FileSmallUpload(dto)
 	return nil, err
 }
+
+// FileSmallDownload 小文件下载
+func FileSmallDownload(c *gin.Context) (any, error) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	logger.L.WithField("id", id).
+		WithField("userId", userId).Info()
+	return portalservice.FileSmallDownload(id, userId)
+}

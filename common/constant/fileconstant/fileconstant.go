@@ -3,6 +3,8 @@ package fileconstant
 const (
 	// RecycleBin 回收站
 	RecycleBin = ":recycle.bin"
+	// SmallFileLimit 小文件上限，为20MB
+	SmallFileLimit = 20 << 20
 )
 
 var (

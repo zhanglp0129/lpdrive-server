@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/emirpasic/gods/v2/queues/linkedlistqueue"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/fileconstant"
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
@@ -15,6 +16,8 @@ import (
 	"github.com/zhanglp0129/lpdrive-server/utils/gbkutil"
 	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
 	"gorm.io/gorm"
+	"mime"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -356,4 +359,100 @@ func FileSearch(dto portaldto.FileSearchDTO) (*portalvo.FileSearchVO, error) {
 		return nil, err
 	}
 	return &vo, nil
+}
+
+func FileSmallUpload(dto portaldto.FileSmallUploadDTO) error {
+	return repository.DB.Transaction(func(tx *gorm.DB) error {
+		// 获取文件名长度
+		length := 0
+		for range dto.File.Filename {
+			length++
+		}
+		// 创建添加数据模型
+		file := model.File{
+			UserID:     dto.UserID,
+			ObjectName: &dto.Sha256,
+			Size:       dto.File.Size,
+			DirID:      &dto.DirID,
+		}
+		// 根据后缀获取mime type
+		mimeType := mime.TypeByExtension(filepath.Ext(dto.File.Filename))
+		if mimeType == "" {
+			fileReader, err := dto.File.Open()
+			if err != nil {
+				return err
+			}
+			defer fileReader.Close()
+			m, err := mimetype.DetectReader(fileReader)
+			if err != nil {
+				return err
+			}
+			mimeType = m.String()
+		}
+		file.MimeType = &mimeType
+		// 检查父目录是否属于该用户
+		err := repository.FileCheckUser(tx, dto.UserID, dto.DirID)
+		if err != nil {
+			return err
+		}
+		// 检查容量是否足够
+		err = repository.CheckCapacity(tx, dto.UserID, dto.File.Size)
+		if err != nil {
+			return err
+		}
+
+		// 尝试添加文件到数据库
+		for i := 0; i <= 30; i++ {
+			name := dto.File.Filename
+			if i > 0 {
+				// 在文件名上加序号，并判断长度
+				num := fmt.Sprintf("(%d)", i)
+				// 校验文件名长度
+				if length+len(num) > 255 {
+					return errorconstant.FilenameLengthExceedLimit
+				}
+				// 拼接文件名
+				pos := strings.LastIndex(name, ".")
+				if pos == -1 {
+					pos = len(name)
+				}
+				name = name[:pos] + num + name[pos:]
+			}
+			// 指定文件名
+			file.Filename = name
+			file.FilenameGBK, err = gbkutil.StrToGbk(name)
+			if err != nil {
+				return err
+			}
+
+			// 添加数据
+			err = tx.Create(&file).Error
+			if dbutil.IsDuplicateKeyError(err) {
+				continue
+			} else if err != nil {
+				return err
+			} else {
+				// 添加成功
+				// 增加使用容量
+				err = tx.Model(&model.User{}).Where("id = ?", dto.UserID).
+					Update("use_capacity", gorm.Expr("use_capacity + ?", dto.File.Size)).Error
+				if err != nil {
+					return err
+				}
+				// 将数据写入minio
+				fileReader, err := dto.File.Open()
+				if err != nil {
+					return err
+				}
+				defer fileReader.Close()
+				err = repository.PutObject(dto.Sha256, fileReader, dto.File.Size)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		}
+		// 重试次数太多
+		return errorconstant.TooManyDuplicateNameFiles
+	})
 }

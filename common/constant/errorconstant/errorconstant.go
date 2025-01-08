@@ -20,4 +20,6 @@ const (
 	FileNotFound              LpdriveError = "文件不存在"
 	IllegalArgument           LpdriveError = "参数非法"
 	QueryTimeout              LpdriveError = "查询超时"
+	FileSizeExceedLimit       LpdriveError = "文件大小超出上限"
+	InsufficientCapacity      LpdriveError = "容量不足"
 )

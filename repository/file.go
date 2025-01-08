@@ -32,3 +32,14 @@ func FileCheckUser(tx *gorm.DB, userId, id int64) error {
 	}
 	return nil
 }
+
+// CheckCapacity 检查用户容量是否足够
+func CheckCapacity(tx *gorm.DB, userId, delta int64) error {
+	var user model.User
+	err := tx.Select("id").Where("id = ? and use_capacity + ? <= capacity", userId, delta).
+		Take(&user).Error
+	if err != nil {
+		return errorconstant.InsufficientCapacity
+	}
+	return nil
+}

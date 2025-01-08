@@ -1,12 +1,16 @@
 package portalcontroller
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
+	"github.com/zhanglp0129/lpdrive-server/common/constant/fileconstant"
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	portalservice "github.com/zhanglp0129/lpdrive-server/service/portal"
 	"github.com/zhanglp0129/lpdrive-server/utils/fileutil"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -132,4 +136,43 @@ func FileSearch(c *gin.Context) (any, error) {
 	dto.OrderBy = fileutil.BuildOrderBy(dto.OrderBy, dto.Desc)
 	logger.L.WithField("FileSearchDTO", dto).Info()
 	return portalservice.FileSearch(dto)
+}
+
+// FileSmallUpload 小文件上传
+func FileSmallUpload(c *gin.Context) (any, error) {
+	var dto portaldto.FileSmallUploadDTO
+	err := c.ShouldBind(&dto)
+	if err != nil {
+		return nil, err
+	}
+	// 校验文件大小
+	if dto.File.Size > fileconstant.SmallFileLimit {
+		return nil, errorconstant.FileSizeExceedLimit
+	}
+	// 检查文件名
+	err = fileutil.CheckFilename(dto.File.Filename)
+	if err != nil {
+		return nil, err
+	}
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	dto.UserID = userId
+
+	// 计算文件哈希
+	file, err := dto.File.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	hasher := sha256.New()
+	_, err = io.Copy(hasher, file)
+	if err != nil {
+		return nil, err
+	}
+	hash := hasher.Sum(nil)
+	dto.Sha256 = fmt.Sprintf("%x", hash)
+
+	logger.L.WithField("FileSmallUploadDTO", dto).Info()
+	err = portalservice.FileSmallUpload(dto)
+	return nil, err
 }

@@ -8,6 +8,7 @@ import (
 	portalservice "github.com/zhanglp0129/lpdrive-server/service/portal"
 	"github.com/zhanglp0129/lpdrive-server/utils/fileutil"
 	"strconv"
+	"strings"
 )
 
 // FileList 获取目录下所有子文件
@@ -109,4 +110,13 @@ func FileGetPath(c *gin.Context) (any, error) {
 	// 获取用户id
 	userId := c.Value("id").(int64)
 	return portalservice.FileGetPath(id, userId)
+}
+
+// FileGetByPath 根据路径获取文件
+func FileGetByPath(c *gin.Context) (any, error) {
+	// 获取参数
+	path := c.Query("path")
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	return portalservice.FileGetByPath(strings.Split(path, "/"), userId)
 }

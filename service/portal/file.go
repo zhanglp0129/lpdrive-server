@@ -259,7 +259,7 @@ func FileGetTree(id int64, userId int64) (*portalvo.FileTreeNode, error) {
 func FileGetPath(id int64, userId int64) ([]portalvo.FilePathVO, error) {
 	vos := make([]portalvo.FilePathVO, 0)
 	// 设置超时时间 3s
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	err := repository.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		tx = tx.Model(&model.File{}).
@@ -291,4 +291,54 @@ func FileGetPath(id int64, userId int64) ([]portalvo.FilePathVO, error) {
 		return nil, err
 	}
 	return vos, nil
+}
+
+func FileGetByPath(path []string, userId int64) (*portalvo.FileInfo, error) {
+	vo := portalvo.FileInfo{}
+	// 设置超时时间
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	err := repository.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		tx = tx.Model(&model.File{}).Select("id").Session(&gorm.Session{})
+		// 先获取根目录id
+		var id int64
+		err := tx.Where("user_id = ? and dir_id is null", userId).Take(&id).Error
+		if err != nil {
+			return err
+		}
+		// 按照路径，逐步获取文件id
+		length := 0
+		for _, filename := range path {
+			if len(filename) == 0 {
+				continue
+			}
+			length++
+			// 将文件名转为gbk编码，因为有索引
+			filenameGBK, err := gbkutil.StrToGbk(filename)
+			if err != nil {
+				return err
+			}
+			// 文件文件名查找
+			err = tx.Where("user_id = ? and dir_id = ? and filename_gbk = ?", userId, id, filenameGBK).
+				Take(&id).Error
+			if err != nil {
+				return err
+			}
+		}
+		// 路径长度不能为空
+		if length == 0 {
+			return errorconstant.FileNotFound
+		}
+		// 根据id获取文件
+		return tx.Select("*", "object_name as sha256").
+			Where("id = ? and user_id = ?", id, userId).Take(&vo).Error
+	})
+	if errors.Is(err, context.DeadlineExceeded) {
+		return nil, errorconstant.QueryTimeout
+	} else if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errorconstant.FileNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	return &vo, nil
 }

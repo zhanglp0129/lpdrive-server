@@ -29,3 +29,9 @@ type FileTreeNode struct {
 	FileInfo
 	Children []FileTreeNode `json:"children,omitempty" gorm:"-"`
 }
+
+type FilePathVO struct {
+	ID       int64  `json:"id"`
+	Filename string `json:"filename"`
+	DirID    *int64 `json:"-"`
+}

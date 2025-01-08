@@ -98,3 +98,15 @@ func FileGetTree(c *gin.Context) (any, error) {
 	logger.L.WithField("fileId", id).Info()
 	return portalservice.FileGetTree(id, userId)
 }
+
+// FileGetPath 获取文件路径
+func FileGetPath(c *gin.Context) (any, error) {
+	// 获取文件id
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	return portalservice.FileGetPath(id, userId)
+}

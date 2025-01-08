@@ -15,6 +15,7 @@ import (
 	"github.com/zhanglp0129/lpdrive-server/utils/gbkutil"
 	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
 	"gorm.io/gorm"
+	"slices"
 	"strings"
 	"time"
 )
@@ -253,4 +254,41 @@ func FileGetTree(id int64, userId int64) (*portalvo.FileTreeNode, error) {
 		return nil, err
 	}
 	return &vo, nil
+}
+
+func FileGetPath(id int64, userId int64) ([]portalvo.FilePathVO, error) {
+	vos := make([]portalvo.FilePathVO, 0)
+	// 设置超时时间 3s
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err := repository.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		tx = tx.Model(&model.File{}).
+			Select("id", "filename", "dir_id").Session(&gorm.Session{})
+		for {
+			// 查询路径
+			var vo portalvo.FilePathVO
+			err := tx.Where("id = ? and user_id = ?", id, userId).Take(&vo).Error
+			if err != nil {
+				return err
+			}
+			if vo.DirID == nil {
+				break
+			}
+			// 将路径添加到结果尾部
+			vos = append(vos, vo)
+			// 下一次查询其父目录
+			id = *vo.DirID
+		}
+		// 将结果反转
+		slices.Reverse(vos)
+		return nil
+	})
+	if errors.Is(err, context.DeadlineExceeded) {
+		return nil, errorconstant.QueryTimeout
+	} else if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errorconstant.FileNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	return vos, nil
 }

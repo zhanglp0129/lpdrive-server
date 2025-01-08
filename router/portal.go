@@ -39,4 +39,5 @@ func handlePortalFile() {
 	file.Post("/create/empty", portalcontroller.FileCreateEmpty)
 	file.Get("/:id", portalcontroller.FileGetById)
 	file.Get("/tree", portalcontroller.FileGetTree)
+	file.Get("/path/:id", portalcontroller.FileGetPath)
 }

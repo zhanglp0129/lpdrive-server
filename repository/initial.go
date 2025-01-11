@@ -4,9 +4,7 @@ import (
 	"context"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/redis/go-redis/v9"
-	"github.com/zhanglp0129/lpdrive-server/common/constant/minioconstant"
 	"github.com/zhanglp0129/lpdrive-server/config"
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	"github.com/zhanglp0129/lpdrive-server/model"
@@ -88,57 +86,6 @@ func initMinio() {
 			logger.L.WithError(err).Panicln("创建存储桶失败")
 		}
 	}
-	// 添加生命周期规则
-	err = addUploadTempLifeCycle(mc)
-	if err != nil {
-		logger.L.WithError(err).Panicln("为上传临时文件添加生命周期规则失败")
-	}
 
 	MC = mc
-}
-
-// 为上传临时文件添加生命周期规则
-func addUploadTempLifeCycle(mc *minio.Core) error {
-	// 创建生命周期规则
-	rule := lifecycle.Rule{
-		ID:     minioconstant.UploadTempLifeCycleID,
-		Status: minio.Enabled,
-		RuleFilter: lifecycle.Filter{
-			Prefix: minioconstant.UploadTempPrefix,
-		},
-		Expiration: lifecycle.Expiration{
-			Days: minioconstant.UploadExpireDays,
-		},
-	}
-
-	// 获取原有生命周期规则
-	lc, err := mc.GetBucketLifecycle(context.Background(), config.C.Minio.BucketName)
-	if err != nil && minio.ToErrorResponse(err).Code != "NoSuchLifecycleConfiguration" {
-		return err
-	}
-	logger.L.WithField("lifecycleConfiguration", lc).Info()
-	// 如果存在id相同的规则，则直接覆盖
-	exists := false
-	if lc != nil {
-		for i, r := range lc.Rules {
-			if r.ID == minioconstant.UploadTempLifeCycleID {
-				exists = true
-				lc.Rules[i] = rule
-				break
-			}
-		}
-	}
-	// 不存在id相同的规则，则添加
-	if !exists {
-		if lc == nil {
-			lc = &lifecycle.Configuration{
-				Rules: []lifecycle.Rule{rule},
-			}
-		} else {
-			lc.Rules = append(lc.Rules, rule)
-		}
-	}
-
-	// 将新的规则写入
-	return mc.SetBucketLifecycle(context.Background(), config.C.Minio.BucketName, lc)
 }

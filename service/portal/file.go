@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"github.com/emirpasic/gods/v2/queues/linkedlistqueue"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
@@ -13,7 +12,6 @@ import (
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/model"
 	"github.com/zhanglp0129/lpdrive-server/repository"
-	"github.com/zhanglp0129/lpdrive-server/utils/dbutil"
 	"github.com/zhanglp0129/lpdrive-server/utils/fileutil"
 	"github.com/zhanglp0129/lpdrive-server/utils/gbkutil"
 	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
@@ -22,7 +20,6 @@ import (
 	"mime"
 	"path/filepath"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -68,11 +65,6 @@ func FileList(dto portaldto.FileListDTO) (portalvo.FileListVO, error) {
 }
 
 func FileCreateDirectory(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.FileCreateDirectoryEmptyVO, error) {
-	// 获取文件名长度
-	length := 0
-	for range dto.Name {
-		length++
-	}
 	// 创建添加数据模型
 	file := model.File{
 		UserID: dto.UserID,
@@ -85,52 +77,25 @@ func FileCreateDirectory(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.F
 		return nil, err
 	}
 
-	// 尝试创建目录
-	for i := 0; i <= 30; i++ {
-		name := dto.Name
-		if i > 0 {
-			// 在文件名上加序号，并判断长度
-			num := fmt.Sprintf("(%d)", i)
-			// 校验文件名长度
-			if length+len(num) > 255 {
-				return nil, errorconstant.FilenameLengthExceedLimit
-			}
-			name += num
-		}
-		// 指定文件名
+	// 创建目录
+	name, err := repository.AttemptAddFile(30, dto.Name, false, func(name string, gbkName []byte) error {
 		file.Filename = name
-		file.FilenameGBK, err = gbkutil.StrToGbk(name)
-		if err != nil {
-			return nil, err
-		}
-
-		// 添加数据
-		err = repository.DB.Create(&file).Error
-		if dbutil.IsDuplicateKeyError(err) {
-			continue
-		} else if err != nil {
-			return nil, err
-		} else {
-			// 添加成功
-			return &portalvo.FileCreateDirectoryEmptyVO{
-				ID:       file.ID,
-				SaveName: file.Filename,
-			}, nil
-		}
+		file.FilenameGBK = gbkName
+		return repository.DB.Create(&file).Error
+	})
+	if err != nil {
+		return nil, err
 	}
-	// 重试次数太多
-	return nil, errorconstant.TooManyDuplicateNameFiles
+	return &portalvo.FileCreateDirectoryEmptyVO{
+		ID:       file.ID,
+		SaveName: name,
+	}, nil
 }
 
 func FileCreateEmpty(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.FileCreateDirectoryEmptyVO, error) {
 	// 返回结果
 	vo := &portalvo.FileCreateDirectoryEmptyVO{}
 	err := repository.DB.Transaction(func(tx *gorm.DB) error {
-		// 获取文件名长度
-		length := 0
-		for range dto.Name {
-			length++
-		}
 		// 创建添加数据模型
 		file := model.File{
 			UserID:     dto.UserID,
@@ -144,51 +109,23 @@ func FileCreateEmpty(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.FileC
 			return err
 		}
 
-		// 尝试创建空文件夹
-		for i := 0; i <= 30; i++ {
-			name := dto.Name
-			if i > 0 {
-				// 在文件名上加序号，并判断长度
-				num := fmt.Sprintf("(%d)", i)
-				// 校验文件名长度
-				if length+len(num) > 255 {
-					return errorconstant.FilenameLengthExceedLimit
-				}
-				// 拼接文件名
-				pos := strings.LastIndex(name, ".")
-				if pos == -1 {
-					pos = len(name)
-				}
-				name = name[:pos] + num + name[pos:]
-			}
-			// 指定文件名
+		name, err := repository.AttemptAddFile(30, dto.Name, true, func(name string, gbkName []byte) error {
 			file.Filename = name
 			file.FilenameGBK, err = gbkutil.StrToGbk(name)
-			if err != nil {
-				return err
-			}
-
-			// 添加数据
-			err = tx.Create(&file).Error
-			if dbutil.IsDuplicateKeyError(err) {
-				continue
-			} else if err != nil {
-				return err
-			} else {
-				// 添加成功
-				// 将数据写入minio
-				err = repository.PutObject(fileconstant.EmptySha256,
-					bytes.NewReader(make([]byte, 0)), 0)
-				if err != nil {
-					return err
-				}
-				vo.ID = file.ID
-				vo.SaveName = file.Filename
-				return nil
-			}
+			return tx.Create(&file).Error
+		})
+		if err != nil {
+			return err
 		}
-		// 重试次数太多
-		return errorconstant.TooManyDuplicateNameFiles
+		// 将数据写入minio
+		err = repository.PutObject(fileconstant.EmptySha256,
+			bytes.NewReader(make([]byte, 0)), 0)
+		if err != nil {
+			return err
+		}
+		vo.ID = file.ID
+		vo.SaveName = name
+		return nil
 	})
 
 	if err != nil {
@@ -366,11 +303,6 @@ func FileSearch(dto portaldto.FileSearchDTO) (*portalvo.FileSearchVO, error) {
 
 func FileSmallUpload(dto portaldto.FileSmallUploadDTO) error {
 	return repository.DB.Transaction(func(tx *gorm.DB) error {
-		// 获取文件名长度
-		length := 0
-		for range dto.File.Filename {
-			length++
-		}
 		// 创建添加数据模型
 		file := model.File{
 			UserID:     dto.UserID,
@@ -404,59 +336,33 @@ func FileSmallUpload(dto portaldto.FileSmallUploadDTO) error {
 			return err
 		}
 
-		// 尝试添加文件到数据库
-		for i := 0; i <= 30; i++ {
-			name := dto.File.Filename
-			if i > 0 {
-				// 在文件名上加序号，并判断长度
-				num := fmt.Sprintf("(%d)", i)
-				// 校验文件名长度
-				if length+len(num) > 255 {
-					return errorconstant.FilenameLengthExceedLimit
-				}
-				// 拼接文件名
-				pos := strings.LastIndex(name, ".")
-				if pos == -1 {
-					pos = len(name)
-				}
-				name = name[:pos] + num + name[pos:]
-			}
-			// 指定文件名
+		// 添加文件到数据库
+		_, err = repository.AttemptAddFile(30, dto.File.Filename, true, func(name string, gbkName []byte) error {
 			file.Filename = name
 			file.FilenameGBK, err = gbkutil.StrToGbk(name)
-			if err != nil {
-				return err
-			}
-
-			// 添加数据
-			err = tx.Create(&file).Error
-			if dbutil.IsDuplicateKeyError(err) {
-				continue
-			} else if err != nil {
-				return err
-			} else {
-				// 添加成功
-				// 增加使用容量
-				err = tx.Model(&model.User{}).Where("id = ?", dto.UserID).
-					Update("use_capacity", gorm.Expr("use_capacity + ?", dto.File.Size)).Error
-				if err != nil {
-					return err
-				}
-				// 将数据写入minio
-				fileReader, err := dto.File.Open()
-				if err != nil {
-					return err
-				}
-				defer fileReader.Close()
-				err = repository.PutObject(dto.Sha256, fileReader, dto.File.Size)
-				if err != nil {
-					return err
-				}
-				return nil
-			}
+			return tx.Create(&file).Error
+		})
+		if err != nil {
+			return err
 		}
-		// 重试次数太多
-		return errorconstant.TooManyDuplicateNameFiles
+
+		// 增加使用容量
+		err = tx.Model(&model.User{}).Where("id = ?", dto.UserID).
+			Update("use_capacity", gorm.Expr("use_capacity + ?", dto.File.Size)).Error
+		if err != nil {
+			return err
+		}
+		// 将数据写入minio
+		fileReader, err := dto.File.Open()
+		if err != nil {
+			return err
+		}
+		defer fileReader.Close()
+		err = repository.PutObject(dto.Sha256, fileReader, dto.File.Size)
+		if err != nil {
+			return err
+		}
+		return nil
 	})
 }
 

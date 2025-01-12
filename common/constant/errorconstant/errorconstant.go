@@ -24,4 +24,6 @@ const (
 	InsufficientCapacity      LpdriveError = "容量不足"
 	DuplicateUploadId         LpdriveError = "上传id重复"
 	IllegalPartSize           LpdriveError = "分片大小非法"
+	MultipartUploadNotExists  LpdriveError = "分片上传不存在"
+	SkipPartsError            LpdriveError = "跳过分片错误"
 )

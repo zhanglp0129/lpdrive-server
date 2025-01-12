@@ -1,9 +1,11 @@
 package portalcontroller
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/fileconstant"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/minioconstant"
@@ -214,4 +216,32 @@ func FilePrepareUpload(c *gin.Context) (any, error) {
 	logger.L.WithField("FilePrepareUploadDTO", dto).Info()
 
 	return portalservice.FilePrepareUpload(dto)
+}
+
+// FileMultipartUpload 文件分片上传
+func FileMultipartUpload(c *gin.Context) (any, error) {
+	// 获取第几个分片
+	partId, err := strconv.ParseInt(c.GetHeader("Part"), 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	// 获取upload id
+	uploadId := c.Param("uploadId")
+	// 获取请求体内容
+	content, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		return nil, err
+	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(content))
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	logger.L.WithFields(logrus.Fields{
+		"partId":        partId,
+		"uploadId":      uploadId,
+		"contentLength": len(content),
+		"userId":        userId,
+	}).Info()
+
+	err = portalservice.FileMultipartUpload(partId, uploadId, content, userId)
+	return nil, err
 }

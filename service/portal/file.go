@@ -14,6 +14,7 @@ import (
 	"github.com/zhanglp0129/lpdrive-server/model"
 	"github.com/zhanglp0129/lpdrive-server/repository"
 	"github.com/zhanglp0129/lpdrive-server/utils/dbutil"
+	"github.com/zhanglp0129/lpdrive-server/utils/fileutil"
 	"github.com/zhanglp0129/lpdrive-server/utils/gbkutil"
 	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
 	"gorm.io/gorm"
@@ -513,4 +514,38 @@ func FilePrepareUpload(dto portaldto.FilePrepareUploadDTO) (*portalvo.FilePrepar
 		return nil, err
 	}
 	return &portalvo.FilePrepareUploadVO{UploadId: &uploadId}, nil
+}
+
+func FileMultipartUpload(partId int64, uploadId string, content []byte, userId int64) error {
+	// 获取redis数据模型
+	multipartUpload, hasher, err := repository.RedisGetMultipartUpload(uploadId)
+	if err != nil {
+		return err
+	}
+	// 校验分片id
+	if multipartUpload.Parts < partId {
+		// 跳过分片
+		return errorconstant.SkipPartsError
+	} else if multipartUpload.Parts > partId {
+		// 重复上传
+		return nil
+	}
+	// 校验用户id
+	if multipartUpload.UserID != userId {
+		return errorconstant.UserNotFound
+	}
+	// 校验分片大小
+	if int64(len(content)) != multipartUpload.PartSize &&
+		!fileutil.IsLastPart(partId, multipartUpload.Size, multipartUpload.PartSize, int64(len(content))) {
+		return errorconstant.IllegalPartSize
+	}
+
+	// 写入minio，minio的part id从1开始
+	err = repository.MinioMultipartUpload(multipartUpload, uploadId, partId+1, content)
+	if err != nil {
+		return err
+	}
+
+	// 写回redis
+	return repository.RedisUpdateMultipartUpload(multipartUpload, uploadId, hasher, content)
 }

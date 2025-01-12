@@ -51,3 +51,10 @@ func BuildOrderBy(orderBy string, desc bool) string {
 	}
 	return res
 }
+
+// IsLastPart 是否为最后一个分片
+func IsLastPart(partId, size, partSize, contentLength int64) bool {
+	// 获取分片数
+	parts := (size-1)/partSize + 1
+	return partId == parts-1 && size-partId*partSize == contentLength
+}

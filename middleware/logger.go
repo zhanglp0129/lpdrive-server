@@ -29,7 +29,7 @@ func LoggerMiddleware(c *gin.Context) {
 
 	if code >= 400 {
 		// 打印error日志
-		logger.L.WithFields(fields).WithError(c.Err()).Error()
+		logger.L.WithFields(fields).WithField("error", c.Errors.Errors()).Error()
 	} else {
 		// 打印info日志
 		logger.L.WithFields(fields).Info()

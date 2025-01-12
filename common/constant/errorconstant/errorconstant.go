@@ -26,4 +26,5 @@ const (
 	IllegalPartSize           LpdriveError = "分片大小非法"
 	MultipartUploadNotExists  LpdriveError = "分片上传不存在"
 	SkipPartsError            LpdriveError = "跳过分片错误"
+	UploadFileError           LpdriveError = "上传文件错误"
 )

@@ -40,4 +40,5 @@ type FilePrepareUploadDTO struct {
 	Size     int64  `json:"size" binging:"required"`
 	PartSize int64  `json:"partSize" binging:"required"`
 	Sha256   string `json:"sha256" binging:"required"`
+	MimeType string `json:"mimeType" binding:"required"`
 }

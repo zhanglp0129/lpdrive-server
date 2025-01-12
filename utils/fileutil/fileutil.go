@@ -1,7 +1,11 @@
 package fileutil
 
 import (
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
+	"io"
+	"mime"
+	"path/filepath"
 	"strings"
 )
 
@@ -57,4 +61,19 @@ func IsLastPart(partId, size, partSize, contentLength int64) bool {
 	// 获取分片数
 	parts := (size-1)/partSize + 1
 	return partId == parts-1 && size-partId*partSize == contentLength
+}
+
+// GetMimeType 获取文件mime type
+func GetMimeType(filename string, reader io.Reader) (string, error) {
+	// 先根据后缀获取mime type
+	mimeType := mime.TypeByExtension(filepath.Ext(filename))
+	if mimeType == "" {
+		// 再根据内容获取
+		m, err := mimetype.DetectReader(reader)
+		if err != nil {
+			return "", err
+		}
+		mimeType = m.String()
+	}
+	return mimeType, nil
 }

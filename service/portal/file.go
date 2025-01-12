@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/emirpasic/gods/v2/queues/linkedlistqueue"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/fileconstant"
@@ -439,7 +440,7 @@ func FileMultipartUpload(partId int64, uploadId string, content []byte, userId i
 	}
 
 	// 写入minio，minio的part id从1开始
-	err = repository.MinioMultipartUpload(multipartUpload, uploadId, partId+1, content)
+	err = repository.MinioMultipartUpload(multipartUpload, uploadId, partId, content)
 	if err != nil {
 		return err
 	}
@@ -465,4 +466,63 @@ func FileGetUploadInfo(uploadId string, userId int64) (*portalvo.FileGetUploadIn
 		Sha256:   multipartUpload.Sha256,
 		Size:     multipartUpload.Size,
 	}, nil
+}
+
+func FileCompleteUpload(uploadId string, userId int64) error {
+	// 获取redis数据模型
+	multipartUpload, hasher, err := repository.RedisGetMultipartUpload(uploadId)
+	if err != nil {
+		return err
+	}
+	// 校验用户id
+	if userId != multipartUpload.UserID {
+		return errorconstant.UserNotFound
+	}
+	// 校验分片和哈希
+	if multipartUpload.Parts != (multipartUpload.Size-1)/multipartUpload.PartSize+1 {
+		return errorconstant.UploadFileError
+	}
+	h := fmt.Sprintf("%x", hasher.Sum(nil))
+	if h != multipartUpload.Sha256 {
+		return errorconstant.UploadFileError
+	}
+
+	return repository.DB.Transaction(func(tx *gorm.DB) error {
+		// 校验容量
+		err = repository.CheckCapacity(tx, userId, multipartUpload.Size)
+		if err != nil {
+			return err
+		}
+		// 创建添加数据模型
+		file := model.File{
+			UserID:     multipartUpload.UserID,
+			ObjectName: &multipartUpload.Sha256,
+			MimeType:   &multipartUpload.MimeType,
+			Size:       multipartUpload.Size,
+			DirID:      &multipartUpload.DirID,
+		}
+		// 将文件写入数据库
+		_, err = repository.AttemptAddFile(30, multipartUpload.Filename, true, func(name string, gbkName []byte) error {
+			file.Filename = name
+			file.FilenameGBK, err = gbkutil.StrToGbk(name)
+			return tx.Create(&file).Error
+		})
+		if err != nil {
+			return err
+		}
+
+		// 增加使用容量
+		err = tx.Model(&model.User{}).Where("id = ?", multipartUpload.UserID).
+			Update("use_capacity", gorm.Expr("use_capacity + ?", multipartUpload.Size)).Error
+		if err != nil {
+			return err
+		}
+		// minio完成上传
+		err = repository.MinioCompleteUpload(multipartUpload.Sha256, uploadId, multipartUpload.Parts)
+		if err != nil {
+			return err
+		}
+		// 删除redis
+		return repository.RedisDeleteMultipartUpload(uploadId)
+	})
 }

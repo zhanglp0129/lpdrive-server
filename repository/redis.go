@@ -29,6 +29,7 @@ func RedisSetMultipartUpload(uploadId string, dto portaldto.FilePrepareUploadDTO
 		Size:      dto.Size,
 		Sha256:    dto.Sha256,
 		Filename:  dto.Filename,
+		MimeType:  dto.MimeType,
 		PartSize:  dto.PartSize,
 		UserID:    dto.UserID,
 		DirID:     dto.DirID,
@@ -96,4 +97,9 @@ func RedisUpdateMultipartUpload(multipartUpload *model.MultipartUpload, uploadId
 		return res.Err()
 	}
 	return nil
+}
+
+func RedisDeleteMultipartUpload(uploadId string) error {
+	key := "multipart-upload:" + uploadId
+	return RDB.Del(context.Background(), key).Err()
 }

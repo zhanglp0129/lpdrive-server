@@ -38,7 +38,25 @@ func MinioNewMultipartUpload(sha256 string) (uploadId string, err error) {
 func MinioMultipartUpload(multipartUpload *model.MultipartUpload, uploadId string, partId int64, content []byte) error {
 	_, err := MC.PutObjectPart(context.Background(),
 		config.C.Minio.BucketName, multipartUpload.Sha256,
-		uploadId, int(partId), bytes.NewBuffer(content),
+		uploadId, int(partId)+1, bytes.NewBuffer(content),
 		int64(len(content)), minio.PutObjectPartOptions{})
+	return err
+}
+
+// MinioCompleteUpload minio完成上传
+func MinioCompleteUpload(sha256, uploadId string, parts int64) error {
+	// 获取ETag
+	res, err := MC.ListObjectParts(context.Background(), config.C.Minio.BucketName,
+		sha256, uploadId, 0, int(parts))
+	if err != nil {
+		return err
+	}
+	minioParts := make([]minio.CompletePart, parts)
+	for i := 0; i < int(parts); i++ {
+		minioParts[i].PartNumber = res.ObjectParts[i].PartNumber
+		minioParts[i].ETag = res.ObjectParts[i].ETag
+	}
+	_, err = MC.CompleteMultipartUpload(context.Background(), config.C.Minio.BucketName,
+		sha256, uploadId, minioParts, minio.PutObjectOptions{})
 	return err
 }

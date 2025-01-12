@@ -13,6 +13,8 @@ type MultipartUpload struct {
 	Sha256 string
 	// 文件名
 	Filename string
+	// 文件mime type
+	MimeType string
 	// 用户id
 	UserID int64
 	// 父目录id

@@ -259,3 +259,18 @@ func FileGetUploadInfo(c *gin.Context) (any, error) {
 
 	return portalservice.FileGetUploadInfo(uploadId, userId)
 }
+
+// FileCompleteUpload 完成分片上传
+func FileCompleteUpload(c *gin.Context) (any, error) {
+	// 获取upload id
+	uploadId := c.Param("uploadId")
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	logger.L.WithFields(logrus.Fields{
+		"uploadId": uploadId,
+		"userId":   userId,
+	}).Info()
+
+	err := portalservice.FileCompleteUpload(uploadId, userId)
+	return nil, err
+}

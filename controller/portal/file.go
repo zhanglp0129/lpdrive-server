@@ -245,3 +245,17 @@ func FileMultipartUpload(c *gin.Context) (any, error) {
 	err = portalservice.FileMultipartUpload(partId, uploadId, content, userId)
 	return nil, err
 }
+
+// FileGetUploadInfo 获取已上传信息
+func FileGetUploadInfo(c *gin.Context) (any, error) {
+	// 获取upload id
+	uploadId := c.Param("uploadId")
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	logger.L.WithFields(logrus.Fields{
+		"uploadId": uploadId,
+		"userId":   userId,
+	}).Info()
+
+	return portalservice.FileGetUploadInfo(uploadId, userId)
+}

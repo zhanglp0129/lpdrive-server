@@ -46,4 +46,5 @@ func handlePortalFile() {
 	file.Get("/small/download/:id", portalcontroller.FileSmallDownload)
 	file.Post("/prepare/upload", portalcontroller.FilePrepareUpload)
 	file.Post("/multipart/upload/:uploadId", portalcontroller.FileMultipartUpload)
+	file.Get("/upload/info/:uploadId", portalcontroller.FileGetUploadInfo)
 }

@@ -549,3 +549,22 @@ func FileMultipartUpload(partId int64, uploadId string, content []byte, userId i
 	// 写回redis
 	return repository.RedisUpdateMultipartUpload(multipartUpload, uploadId, hasher, content)
 }
+
+func FileGetUploadInfo(uploadId string, userId int64) (*portalvo.FileGetUploadInfoVO, error) {
+	// 获取redis数据模型
+	multipartUpload, _, err := repository.RedisGetMultipartUpload(uploadId)
+	if err != nil {
+		return nil, err
+	}
+	// 校验用户id
+	if userId != multipartUpload.UserID {
+		return nil, errorconstant.UserNotFound
+	}
+
+	return &portalvo.FileGetUploadInfoVO{
+		Parts:    multipartUpload.Parts,
+		PartSize: multipartUpload.PartSize,
+		Sha256:   multipartUpload.Sha256,
+		Size:     multipartUpload.Size,
+	}, nil
+}

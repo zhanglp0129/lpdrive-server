@@ -32,3 +32,12 @@ type FileSmallUploadDTO struct {
 	DirID  int64                 `form:"dirId" binding:"required"`
 	File   *multipart.FileHeader `form:"file" binding:"required"`
 }
+
+type FilePrepareUploadDTO struct {
+	UserID   int64
+	DirID    int64  `json:"dirId" binging:"required"`
+	Filename string `json:"filename" binging:"required"`
+	Size     int64  `json:"size" binging:"required"`
+	PartSize int64  `json:"partSize" binging:"required"`
+	Sha256   string `json:"sha256" binging:"required"`
+}

@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/fileconstant"
+	"github.com/zhanglp0129/lpdrive-server/common/constant/minioconstant"
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	portalservice "github.com/zhanglp0129/lpdrive-server/service/portal"
@@ -188,4 +189,29 @@ func FileSmallDownload(c *gin.Context) (any, error) {
 	logger.L.WithField("id", id).
 		WithField("userId", userId).Info()
 	return portalservice.FileSmallDownload(id, userId)
+}
+
+// FilePrepareUpload 文件预上传
+func FilePrepareUpload(c *gin.Context) (any, error) {
+	// 获取参数
+	var dto portaldto.FilePrepareUploadDTO
+	err := c.ShouldBindJSON(&dto)
+	if err != nil {
+		return nil, err
+	}
+	// 校验文件名
+	err = fileutil.CheckFilename(dto.Filename)
+	if err != nil {
+		return nil, err
+	}
+	// 校验分片大小
+	if dto.PartSize > minioconstant.MaxPartSize || dto.PartSize < minioconstant.MinPartSize {
+		return nil, errorconstant.IllegalPartSize
+	}
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	dto.UserID = userId
+	logger.L.WithField("FilePrepareUploadDTO", dto).Info()
+
+	return portalservice.FilePrepareUpload(dto)
 }

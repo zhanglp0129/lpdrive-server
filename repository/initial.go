@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/redis/go-redis/v9"
 	"github.com/zhanglp0129/lpdrive-server/config"
 	"github.com/zhanglp0129/lpdrive-server/logger"
@@ -62,6 +63,8 @@ func initRedis() {
 	if err != nil {
 		logger.L.WithField("config", redisConfig).WithError(err).Panicln("redis连接失败")
 	}
+
+	RDB = rdb
 }
 
 // 初始化minio
@@ -88,4 +91,42 @@ func initMinio() {
 	}
 
 	MC = mc
+}
+
+// 添加生命周期规则
+func addLifeCycleRules(mc *minio.Core, rules ...lifecycle.Rule) error {
+	// 获取原有生命周期规则
+	lc, err := mc.GetBucketLifecycle(context.Background(), config.C.Minio.BucketName)
+	if err != nil && minio.ToErrorResponse(err).Code != "NoSuchLifecycleConfiguration" {
+		return err
+	}
+	logger.L.WithField("lifecycleConfiguration", lc).Info()
+
+	// 添加生命周期规则
+	if lc == nil {
+		lc = &lifecycle.Configuration{
+			Rules: rules,
+		}
+	} else {
+		exists := make([]bool, len(rules))
+		// 覆盖相同规则
+		for i, rule := range rules {
+			for j := range lc.Rules {
+				if lc.Rules[j].ID == rule.ID {
+					exists[i] = true
+					lc.Rules[j] = rule
+					break
+				}
+			}
+		}
+		// 补充剩余规则
+		for i := range rules {
+			if !exists[i] {
+				lc.Rules = append(lc.Rules, rules[i])
+			}
+		}
+	}
+
+	// 将新的规则写入
+	return mc.SetBucketLifecycle(context.Background(), config.C.Minio.BucketName, lc)
 }

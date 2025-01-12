@@ -1,10 +1,10 @@
 package minioconstant
 
 const (
-	// UploadTempLifeCycleID 上传临时文件生命周期id
-	UploadTempLifeCycleID = "upload-temp"
-	// UploadTempPrefix 上传临时目录前缀
-	UploadTempPrefix = "upload-temp/"
+	// AbortUploadLifecycleID 自动终止分片上传的生命周期规则
+	AbortUploadLifecycleID = "abort-upload"
 	// UploadExpireDays 上传过期天数
-	UploadExpireDays = 3
+	UploadExpireDays = 1
+	MinPartSize      = 5 << 20
+	MaxPartSize      = 20 << 20
 )

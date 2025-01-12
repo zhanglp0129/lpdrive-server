@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"github.com/minio/minio-go/v7"
-	"github.com/zhanglp0129/lpdrive-server/common/constant/minioconstant"
 	"github.com/zhanglp0129/lpdrive-server/config"
 	"io"
 )
@@ -25,7 +24,10 @@ func ReadObject(sha256 string) (io.ReadCloser, error) {
 	return reader, err
 }
 
-// GetTempUploadObjectName 获取临时上传对象名
-func GetTempUploadObjectName(uuid string) string {
-	return minioconstant.UploadTempPrefix + uuid
+// MinioNewMultipartUpload 新建分片上传
+func MinioNewMultipartUpload(sha256 string) (uploadId string, err error) {
+	return MC.NewMultipartUpload(context.Background(),
+		config.C.Minio.BucketName,
+		sha256,
+		minio.PutObjectOptions{})
 }

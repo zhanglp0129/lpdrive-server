@@ -22,4 +22,6 @@ const (
 	QueryTimeout              LpdriveError = "查询超时"
 	FileSizeExceedLimit       LpdriveError = "文件大小超出上限"
 	InsufficientCapacity      LpdriveError = "容量不足"
+	DuplicateUploadId         LpdriveError = "上传id重复"
+	IllegalPartSize           LpdriveError = "分片大小非法"
 )

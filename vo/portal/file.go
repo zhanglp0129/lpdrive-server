@@ -47,3 +47,7 @@ type FileSmallDownloadVO struct {
 	Sha256   string `json:"sha256"`
 	Size     int64  `json:"size"`
 }
+
+type FilePrepareUploadVO struct {
+	UploadId *string `json:"uploadId"`
+}

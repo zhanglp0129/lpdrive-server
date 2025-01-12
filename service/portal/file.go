@@ -488,3 +488,29 @@ func FileSmallDownload(id int64, userId int64) (*portalvo.FileSmallDownloadVO, e
 	vo.Content = base64.StdEncoding.EncodeToString(content)
 	return &vo, nil
 }
+
+func FilePrepareUpload(dto portaldto.FilePrepareUploadDTO) (*portalvo.FilePrepareUploadVO, error) {
+	// 校验用户
+	err := repository.FileCheckUser(repository.DB, dto.UserID, dto.DirID)
+	if err != nil {
+		return nil, err
+	}
+	// 校验容量
+	err = repository.CheckCapacity(repository.DB, dto.UserID, dto.Size)
+	if err != nil {
+		return nil, err
+	}
+
+	// 新建一个分片上传
+	uploadId, err := repository.MinioNewMultipartUpload(dto.Sha256)
+	if err != nil {
+		return nil, err
+	}
+
+	// 写入redis
+	err = repository.RedisSetMultipartUpload(uploadId, dto)
+	if err != nil {
+		return nil, err
+	}
+	return &portalvo.FilePrepareUploadVO{UploadId: &uploadId}, nil
+}

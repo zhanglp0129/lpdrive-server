@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"github.com/emirpasic/gods/v2/queues/linkedlistqueue"
-	"github.com/gabriel-vasile/mimetype"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/fileconstant"
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
@@ -17,8 +16,6 @@ import (
 	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
 	"gorm.io/gorm"
 	"io"
-	"mime"
-	"path/filepath"
 	"slices"
 	"time"
 )
@@ -310,23 +307,18 @@ func FileSmallUpload(dto portaldto.FileSmallUploadDTO) error {
 			Size:       dto.File.Size,
 			DirID:      &dto.DirID,
 		}
-		// 根据后缀获取mime type
-		mimeType := mime.TypeByExtension(filepath.Ext(dto.File.Filename))
-		if mimeType == "" {
-			fileReader, err := dto.File.Open()
-			if err != nil {
-				return err
-			}
-			defer fileReader.Close()
-			m, err := mimetype.DetectReader(fileReader)
-			if err != nil {
-				return err
-			}
-			mimeType = m.String()
+		// 获取文件mime type
+		fileReader, err := dto.File.Open()
+		if err != nil {
+			return err
+		}
+		mimeType, err := fileutil.GetMimeType(dto.File.Filename, fileReader)
+		if err != nil {
+			return err
 		}
 		file.MimeType = &mimeType
 		// 检查父目录是否属于该用户
-		err := repository.FileCheckUser(tx, dto.UserID, dto.DirID)
+		err = repository.FileCheckUser(tx, dto.UserID, dto.DirID)
 		if err != nil {
 			return err
 		}
@@ -353,7 +345,7 @@ func FileSmallUpload(dto portaldto.FileSmallUploadDTO) error {
 			return err
 		}
 		// 将数据写入minio
-		fileReader, err := dto.File.Open()
+		fileReader, err = dto.File.Open()
 		if err != nil {
 			return err
 		}

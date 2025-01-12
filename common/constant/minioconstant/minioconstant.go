@@ -5,6 +5,8 @@ const (
 	AbortUploadLifecycleID = "abort-upload"
 	// UploadExpireDays 上传过期天数
 	UploadExpireDays = 1
-	MinPartSize      = 5 << 20
-	MaxPartSize      = 20 << 20
+	// MinPartSize 最小分片大小
+	MinPartSize = 5 << 20
+	// MaxPartSize 最大分片大小
+	MaxPartSize = 20 << 20
 )

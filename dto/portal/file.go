@@ -27,10 +27,11 @@ type FileSearchDTO struct {
 }
 
 type FileSmallUploadDTO struct {
-	UserID int64
-	Sha256 string
-	DirID  int64                 `form:"dirId" binding:"required"`
-	File   *multipart.FileHeader `form:"file" binding:"required"`
+	UserID   int64
+	Sha256   string
+	DirID    int64                 `form:"dirId" binding:"required"`
+	File     *multipart.FileHeader `form:"file" binding:"required"`
+	MimeType string                `form:"mimeType" binding:"required"`
 }
 
 type FilePrepareUploadDTO struct {

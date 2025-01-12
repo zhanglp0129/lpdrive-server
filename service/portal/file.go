@@ -305,21 +305,12 @@ func FileSmallUpload(dto portaldto.FileSmallUploadDTO) error {
 		file := model.File{
 			UserID:     dto.UserID,
 			ObjectName: &dto.Sha256,
+			MimeType:   &dto.MimeType,
 			Size:       dto.File.Size,
 			DirID:      &dto.DirID,
 		}
-		// 获取文件mime type
-		fileReader, err := dto.File.Open()
-		if err != nil {
-			return err
-		}
-		mimeType, err := fileutil.GetMimeType(dto.File.Filename, fileReader)
-		if err != nil {
-			return err
-		}
-		file.MimeType = &mimeType
 		// 检查父目录是否属于该用户
-		err = repository.FileCheckUser(tx, dto.UserID, dto.DirID)
+		err := repository.FileCheckUser(tx, dto.UserID, dto.DirID)
 		if err != nil {
 			return err
 		}
@@ -346,7 +337,7 @@ func FileSmallUpload(dto portaldto.FileSmallUploadDTO) error {
 			return err
 		}
 		// 将数据写入minio
-		fileReader, err = dto.File.Open()
+		fileReader, err := dto.File.Open()
 		if err != nil {
 			return err
 		}

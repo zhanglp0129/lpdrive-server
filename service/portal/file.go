@@ -467,3 +467,26 @@ func FileCompleteUpload(uploadId string, userId int64) error {
 		return repository.RedisDeleteMultipartUpload(uploadId)
 	})
 }
+
+func FileMultipartDownload(id int64, fileRange string, userId int64) (*portalvo.FileMultipartDownloadVO, error) {
+	// 查询数据库
+	var file model.File
+	err := repository.DB.Where("id = ? and user_id = ? and is_dir = 0", id, userId).
+		Select("mime_type", "object_name").Take(&file).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) || file.ObjectName == nil {
+		return nil, errorconstant.FileNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	// 从minio获取文件
+	content, err := repository.MinioRangeReadObject(*file.ObjectName, fileRange)
+	if err != nil {
+		return nil, err
+	}
+
+	return &portalvo.FileMultipartDownloadVO{
+		Content:  content,
+		MimeType: *file.MimeType,
+	}, nil
+}

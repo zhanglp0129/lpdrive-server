@@ -9,11 +9,13 @@ import (
 	"github.com/zhanglp0129/lpdrive-server/common/constant/errorconstant"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/fileconstant"
 	"github.com/zhanglp0129/lpdrive-server/common/constant/minioconstant"
+	"github.com/zhanglp0129/lpdrive-server/controller"
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/logger"
 	portalservice "github.com/zhanglp0129/lpdrive-server/service/portal"
 	"github.com/zhanglp0129/lpdrive-server/utils/fileutil"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 )
@@ -273,4 +275,43 @@ func FileCompleteUpload(c *gin.Context) (any, error) {
 
 	err := portalservice.FileCompleteUpload(uploadId, userId)
 	return nil, err
+}
+
+// FileMultipartDownload 文件分片下载
+func FileMultipartDownload(c *gin.Context) {
+	// 获取文件id
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		controller.Error(c, err)
+		return
+	}
+	// 获取范围
+	fileRange := c.GetHeader("Range")
+	// 获取用户id
+	userId := c.Value("id").(int64)
+	logger.L.WithFields(logrus.Fields{
+		"id":    id,
+		"range": fileRange,
+	}).Info()
+
+	vo, err := portalservice.FileMultipartDownload(id, fileRange, userId)
+	if err != nil {
+		controller.Error(c, err)
+		return
+	}
+	defer vo.Content.Close()
+
+	// 正常请求
+	c.Header("Content-Type", vo.MimeType)
+	if fileRange == "" {
+		c.Status(http.StatusOK)
+	} else {
+		c.Status(http.StatusPartialContent)
+	}
+	// 写入文件内容
+	_, err = io.Copy(c.Writer, vo.Content)
+	if err != nil {
+		controller.Error(c, err)
+		return
+	}
 }

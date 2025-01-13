@@ -22,7 +22,7 @@ func PutObject(sha256 string, data io.Reader, size int64) error {
 func ReadObject(sha256 string) (io.ReadCloser, error) {
 	reader, _, _, err := MC.GetObject(context.Background(),
 		config.C.Minio.BucketName,
-		sha256, minio.StatObjectOptions{})
+		sha256, minio.GetObjectOptions{})
 	return reader, err
 }
 
@@ -72,4 +72,13 @@ func MinioCompleteUpload(sha256, uploadId string, parts int64) error {
 	_, err = MC.CompleteMultipartUpload(context.Background(), config.C.Minio.BucketName,
 		sha256, uploadId, minioParts, minio.PutObjectOptions{})
 	return err
+}
+
+// MinioRangeReadObject minio
+func MinioRangeReadObject(sha256, fileRange string) (io.ReadCloser, error) {
+	opts := minio.GetObjectOptions{}
+	opts.Set("Range", fileRange)
+	reader, _, _, err := MC.GetObject(context.Background(), config.C.Minio.BucketName,
+		sha256, opts)
+	return reader, err
 }

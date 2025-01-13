@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/zhanglp0129/lpdrive-server/controller"
 	"github.com/zhanglp0129/lpdrive-server/vo"
 	"net/http"
 )
@@ -15,9 +16,7 @@ func (h HandleFunc) toGinHandleFunc() gin.HandlerFunc {
 		res, err := h(c)
 		if err != nil {
 			// 出现了错误
-			_ = c.Error(err)
-			c.JSON(http.StatusBadRequest, vo.Error(err.Error()))
-			c.Abort()
+			controller.Error(c, err)
 			return
 		}
 

@@ -1,5 +1,7 @@
 package portalvo
 
+import "io"
+
 type FileInfo struct {
 	ID          int64   `json:"id"`
 	UserID      int64   `json:"userId"`
@@ -57,4 +59,9 @@ type FileGetUploadInfoVO struct {
 	PartSize int64  `json:"partSize"`
 	Sha256   string `json:"sha256"`
 	Size     int64  `json:"size"`
+}
+
+type FileMultipartDownloadVO struct {
+	Content  io.ReadCloser
+	MimeType string
 }

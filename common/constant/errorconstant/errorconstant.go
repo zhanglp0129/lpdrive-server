@@ -28,4 +28,5 @@ const (
 	SkipPartsError            LpdriveError = "跳过分片错误"
 	UploadFileError           LpdriveError = "上传文件错误"
 	FileSizeError             LpdriveError = "文件大小错误"
+	RangeError                LpdriveError = "分片错误"
 )

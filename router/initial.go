@@ -11,6 +11,7 @@ var (
 )
 
 func init() {
+	gin.SetMode(gin.ReleaseMode)
 	R = gin.New()
 	// 替换默认日志
 	R.Use(middleware.LoggerMiddleware)

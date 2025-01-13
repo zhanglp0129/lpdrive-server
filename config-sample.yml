@@ -1,0 +1,20 @@
+admin:
+  username: admin
+  password: 123456
+
+login:
+  jwt_key: qwerty
+
+database:
+  dsn: root:123456@tcp(127.0.0.1:3306)/lpdrive?charset=utf8mb4&parseTime=True&loc=Local
+
+minio:
+  endpoint: 127.0.0.1:9000
+  bucket_name: lpdrive
+  access_key: <minio access key>
+  secret_key: <minio secret key>
+
+redis:
+  addrs:
+    - 127.0.0.1:6379
+  db: 0

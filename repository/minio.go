@@ -26,6 +26,19 @@ func ReadObject(sha256 string) (io.ReadCloser, error) {
 	return reader, err
 }
 
+// MinioObjectExists minio判断对象是否存在。
+// 分别返回：是否存在、对象大小、可能发生的异常
+func MinioObjectExists(sha256 string) (bool, int64, error) {
+	info, err := MC.StatObject(context.Background(), config.C.Minio.BucketName,
+		sha256, minio.StatObjectOptions{})
+	if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+		return false, 0, nil
+	} else if err != nil {
+		return false, 0, err
+	}
+	return true, info.Size, nil
+}
+
 // MinioNewMultipartUpload 新建分片上传
 func MinioNewMultipartUpload(sha256 string) (uploadId string, err error) {
 	return MC.NewMultipartUpload(context.Background(),

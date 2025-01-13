@@ -63,65 +63,42 @@ func FileList(dto portaldto.FileListDTO) (portalvo.FileListVO, error) {
 }
 
 func FileCreateDirectory(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.FileCreateDirectoryEmptyVO, error) {
-	// 创建添加数据模型
-	file := model.File{
-		UserID: dto.UserID,
-		IsDir:  true,
-		DirID:  &dto.DirID,
-	}
-	// 检查父目录是否属于该用户
-	err := repository.FileCheckUser(repository.DB, dto.UserID, dto.DirID)
-	if err != nil {
-		return nil, err
-	}
-
-	// 创建目录
-	name, err := repository.AttemptAddFile(30, dto.Name, false, func(name string, gbkName []byte) error {
-		file.Filename = name
-		file.FilenameGBK = gbkName
-		return repository.DB.Create(&file).Error
+	var vo portalvo.FileCreateDirectoryEmptyVO
+	err := repository.DB.Transaction(func(tx *gorm.DB) error {
+		// 写入数据库
+		id, name, err := repository.DatabaseCreateFile(tx, dto.UserID, nil, dto.Name, nil,
+			0, true, dto.DirID)
+		if err != nil {
+			return err
+		}
+		vo.ID = id
+		vo.SaveName = name
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &portalvo.FileCreateDirectoryEmptyVO{
-		ID:       file.ID,
-		SaveName: name,
-	}, nil
+	return &vo, nil
 }
 
 func FileCreateEmpty(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.FileCreateDirectoryEmptyVO, error) {
 	// 返回结果
-	vo := &portalvo.FileCreateDirectoryEmptyVO{}
+	var vo portalvo.FileCreateDirectoryEmptyVO
 	err := repository.DB.Transaction(func(tx *gorm.DB) error {
-		// 创建添加数据模型
-		file := model.File{
-			UserID:     dto.UserID,
-			ObjectName: &fileconstant.EmptySha256,
-			MimeType:   &fileconstant.DefaultMimeType,
-			DirID:      &dto.DirID,
-		}
-		// 检查父目录是否属于该用户
-		err := repository.FileCheckUser(tx, dto.UserID, dto.DirID)
+		// 写入数据库
+		id, name, err := repository.DatabaseCreateFile(tx, dto.UserID, &fileconstant.EmptySha256,
+			dto.Name, &fileconstant.DefaultMimeType, 0, false, dto.DirID)
 		if err != nil {
 			return err
 		}
 
-		name, err := repository.AttemptAddFile(30, dto.Name, true, func(name string, gbkName []byte) error {
-			file.Filename = name
-			file.FilenameGBK, err = gbkutil.StrToGbk(name)
-			return tx.Create(&file).Error
-		})
-		if err != nil {
-			return err
-		}
 		// 将数据写入minio
 		err = repository.PutObject(fileconstant.EmptySha256,
 			bytes.NewReader(make([]byte, 0)), 0)
 		if err != nil {
 			return err
 		}
-		vo.ID = file.ID
+		vo.ID = id
 		vo.SaveName = name
 		return nil
 	})
@@ -129,7 +106,7 @@ func FileCreateEmpty(dto portaldto.FileCreateDirectoryEmptyDTO) (*portalvo.FileC
 	if err != nil {
 		return nil, err
 	}
-	return vo, nil
+	return &vo, nil
 }
 
 func FileGetById(id int64, userId int64) (*portalvo.FileInfo, error) {
@@ -301,41 +278,13 @@ func FileSearch(dto portaldto.FileSearchDTO) (*portalvo.FileSearchVO, error) {
 
 func FileSmallUpload(dto portaldto.FileSmallUploadDTO) error {
 	return repository.DB.Transaction(func(tx *gorm.DB) error {
-		// 创建添加数据模型
-		file := model.File{
-			UserID:     dto.UserID,
-			ObjectName: &dto.Sha256,
-			MimeType:   &dto.MimeType,
-			Size:       dto.File.Size,
-			DirID:      &dto.DirID,
-		}
-		// 检查父目录是否属于该用户
-		err := repository.FileCheckUser(tx, dto.UserID, dto.DirID)
-		if err != nil {
-			return err
-		}
-		// 检查容量是否足够
-		err = repository.CheckCapacity(tx, dto.UserID, dto.File.Size)
+		// 数据库添加文件
+		_, _, err := repository.DatabaseCreateFile(tx, dto.UserID, &dto.Sha256, dto.File.Filename,
+			&dto.MimeType, dto.File.Size, false, dto.DirID)
 		if err != nil {
 			return err
 		}
 
-		// 添加文件到数据库
-		_, err = repository.AttemptAddFile(30, dto.File.Filename, true, func(name string, gbkName []byte) error {
-			file.Filename = name
-			file.FilenameGBK, err = gbkutil.StrToGbk(name)
-			return tx.Create(&file).Error
-		})
-		if err != nil {
-			return err
-		}
-
-		// 增加使用容量
-		err = tx.Model(&model.User{}).Where("id = ?", dto.UserID).
-			Update("use_capacity", gorm.Expr("use_capacity + ?", dto.File.Size)).Error
-		if err != nil {
-			return err
-		}
 		// 将数据写入minio
 		fileReader, err := dto.File.Open()
 		if err != nil {
@@ -390,6 +339,29 @@ func FilePrepareUpload(dto portaldto.FilePrepareUploadDTO) (*portalvo.FilePrepar
 	err = repository.CheckCapacity(repository.DB, dto.UserID, dto.Size)
 	if err != nil {
 		return nil, err
+	}
+
+	// 判断对象是否存在
+	exists, objectSize, err := repository.MinioObjectExists(dto.Sha256)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		// 对象存在
+		// 校验大小
+		if dto.Size != objectSize {
+			return nil, errorconstant.FileSizeError
+		}
+		// 添加数据
+		err = repository.DB.Transaction(func(tx *gorm.DB) error {
+			_, _, err = repository.DatabaseCreateFile(tx, dto.UserID, &dto.Sha256,
+				dto.Filename, &dto.MimeType, dto.Size, false, dto.DirID)
+			return err
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &portalvo.FilePrepareUploadVO{}, nil
 	}
 
 	// 新建一个分片上传
@@ -479,35 +451,13 @@ func FileCompleteUpload(uploadId string, userId int64) error {
 	}
 
 	return repository.DB.Transaction(func(tx *gorm.DB) error {
-		// 校验容量
-		err = repository.CheckCapacity(tx, userId, multipartUpload.Size)
-		if err != nil {
-			return err
-		}
-		// 创建添加数据模型
-		file := model.File{
-			UserID:     multipartUpload.UserID,
-			ObjectName: &multipartUpload.Sha256,
-			MimeType:   &multipartUpload.MimeType,
-			Size:       multipartUpload.Size,
-			DirID:      &multipartUpload.DirID,
-		}
-		// 将文件写入数据库
-		_, err = repository.AttemptAddFile(30, multipartUpload.Filename, true, func(name string, gbkName []byte) error {
-			file.Filename = name
-			file.FilenameGBK, err = gbkutil.StrToGbk(name)
-			return tx.Create(&file).Error
-		})
+		// 写入数据库
+		_, _, err = repository.DatabaseCreateFile(tx, multipartUpload.UserID, &multipartUpload.Sha256,
+			multipartUpload.Filename, &multipartUpload.MimeType, multipartUpload.Size, false, multipartUpload.DirID)
 		if err != nil {
 			return err
 		}
 
-		// 增加使用容量
-		err = tx.Model(&model.User{}).Where("id = ?", multipartUpload.UserID).
-			Update("use_capacity", gorm.Expr("use_capacity + ?", multipartUpload.Size)).Error
-		if err != nil {
-			return err
-		}
 		// minio完成上传
 		err = repository.MinioCompleteUpload(multipartUpload.Sha256, uploadId, multipartUpload.Parts)
 		if err != nil {

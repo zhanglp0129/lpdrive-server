@@ -10,8 +10,5 @@ FROM alpine:3.20.3 as runner
 WORKDIR /app
 COPY --from=builder /build/lpdrive /app/
 RUN chmod u+x /app/lpdrive
-# 暴露配置文件和日志文件
-VOLUME /app/config.yaml
-VOLUME /app/logs
 EXPOSE 8080
 CMD ["/app/lpdrive"]

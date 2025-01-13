@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/spf13/viper"
 )
 
@@ -15,7 +14,7 @@ func init() {
 	// 读取配置文件
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
-		fmt.Println("配置文件读取失败")
+		panic(err)
 	}
 
 	// 从环境变量读取配置

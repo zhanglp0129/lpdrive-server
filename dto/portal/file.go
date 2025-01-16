@@ -43,3 +43,9 @@ type FilePrepareUploadDTO struct {
 	Sha256   string `json:"sha256" binging:"required"`
 	MimeType string `json:"mimeType" binding:"required"`
 }
+
+type FileRenameDTO struct {
+	UserID   int64
+	ID       int64  `form:"id"`
+	Filename string `form:"filename"`
+}

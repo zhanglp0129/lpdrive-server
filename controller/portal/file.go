@@ -315,3 +315,24 @@ func FileMultipartDownload(c *gin.Context) {
 		return
 	}
 }
+
+// FileRename 文件重命名
+func FileRename(c *gin.Context) (any, error) {
+	// 获取请求参数
+	var dto portaldto.FileRenameDTO
+	err := c.ShouldBindQuery(&dto)
+	if err != nil {
+		return nil, err
+	}
+	// 校验文件名
+	err = fileutil.CheckFilename(dto.Filename)
+	if err != nil {
+		return nil, err
+	}
+	// 获取用户id
+	dto.UserID = c.Value("id").(int64)
+	logger.L.WithField("FileRenameDTO", dto).Info()
+
+	err = portalservice.FileRename(dto)
+	return nil, err
+}

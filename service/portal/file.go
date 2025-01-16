@@ -12,6 +12,7 @@ import (
 	portaldto "github.com/zhanglp0129/lpdrive-server/dto/portal"
 	"github.com/zhanglp0129/lpdrive-server/model"
 	"github.com/zhanglp0129/lpdrive-server/repository"
+	"github.com/zhanglp0129/lpdrive-server/utils/dbutil"
 	"github.com/zhanglp0129/lpdrive-server/utils/fileutil"
 	"github.com/zhanglp0129/lpdrive-server/utils/gbkutil"
 	portalvo "github.com/zhanglp0129/lpdrive-server/vo/portal"
@@ -495,4 +496,19 @@ func FileMultipartDownload(id int64, fileRange string, userId int64) (*portalvo.
 		Content:  content,
 		MimeType: *file.MimeType,
 	}, nil
+}
+
+func FileRename(dto portaldto.FileRenameDTO) error {
+	// 转为gbk
+	filenameGBK, err := gbkutil.StrToGbk(dto.Filename)
+	if err != nil {
+		return err
+	}
+	// 重命名文件
+	err = repository.DB.Model(&model.File{}).Where("id = ? and user_id = ? and dir_id is not null", dto.ID, dto.UserID).
+		Update("filename", dto.Filename).Update("filename_gbk", filenameGBK).Error
+	if dbutil.IsDuplicateKeyError(err) {
+		return errorconstant.DuplicateFilename
+	}
+	return err
 }

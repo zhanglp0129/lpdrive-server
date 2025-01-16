@@ -27,4 +27,5 @@ const (
 	MultipartUploadNotExists  LpdriveError = "分片上传不存在"
 	UploadFileError           LpdriveError = "上传文件错误"
 	FileSizeError             LpdriveError = "文件大小错误"
+	DuplicateFilename         LpdriveError = "文件名重复"
 )

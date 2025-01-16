@@ -210,7 +210,7 @@ func FilePrepareUpload(c *gin.Context) (any, error) {
 	}
 	// 校验分片大小
 	if dto.PartSize > minioconstant.MaxPartSize || dto.PartSize < minioconstant.MinPartSize {
-		return nil, errorconstant.IllegalPartSize
+		return nil, errorconstant.IllegalPart
 	}
 	// 获取用户id
 	userId := c.Value("id").(int64)

@@ -384,25 +384,31 @@ func FileMultipartUpload(partId int64, uploadId string, content []byte, userId i
 	if err != nil {
 		return err
 	}
-	// 校验分片id
-	if multipartUpload.Parts < partId {
-		// 跳过分片
-		return errorconstant.SkipPartsError
-	} else if multipartUpload.Parts > partId {
-		// 重复上传
+	// 重复上传
+	if partId < multipartUpload.Parts {
 		return nil
 	}
 	// 校验用户id
 	if multipartUpload.UserID != userId {
 		return errorconstant.UserNotFound
 	}
-	// 校验分片大小
+
+	// 校验分片是否合法
+	if partId > multipartUpload.Parts {
+		// 跳过分片
+		return errorconstant.IllegalPart
+	}
+	if multipartUpload.Parts*multipartUpload.PartSize+int64(len(content)) > multipartUpload.Size {
+		// 已上传大小超过文件总大小
+		return errorconstant.IllegalPart
+	}
 	if int64(len(content)) != multipartUpload.PartSize &&
 		!fileutil.IsLastPart(partId, multipartUpload.Size, multipartUpload.PartSize, int64(len(content))) {
-		return errorconstant.IllegalPartSize
+		// 分片大小错误
+		return errorconstant.IllegalPart
 	}
 
-	// 写入minio，minio的part id从1开始
+	// 写入minio
 	err = repository.MinioMultipartUpload(multipartUpload, uploadId, partId, content)
 	if err != nil {
 		return err

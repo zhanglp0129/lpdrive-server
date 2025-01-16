@@ -23,10 +23,8 @@ const (
 	FileSizeExceedLimit       LpdriveError = "文件大小超出上限"
 	InsufficientCapacity      LpdriveError = "容量不足"
 	DuplicateUploadId         LpdriveError = "上传id重复"
-	IllegalPartSize           LpdriveError = "分片大小非法"
+	IllegalPart               LpdriveError = "分片非法"
 	MultipartUploadNotExists  LpdriveError = "分片上传不存在"
-	SkipPartsError            LpdriveError = "跳过分片错误"
 	UploadFileError           LpdriveError = "上传文件错误"
 	FileSizeError             LpdriveError = "文件大小错误"
-	RangeError                LpdriveError = "分片错误"
 )
